@@ -1,0 +1,61 @@
+name: Build Extensions
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------
+      # BUILD CHROME VERSION
+      # ---------------------------------------------------------
+      - name: Prepare Chrome Build
+        run: |
+          mkdir -p dist/chrome
+          cp -r src/* dist/chrome/
+          # Remove Firefox manifest, Rename Chrome manifest
+          rm dist/chrome/manifest-firefox.json
+          mv dist/chrome/manifest-chrome.json dist/chrome/manifest.json
+
+      - name: Zip Chrome Extension
+        run: |
+          cd dist/chrome
+          zip -r ../../dock-chrome-v1.6.zip .
+      
+      # ---------------------------------------------------------
+      # BUILD FIREFOX VERSION
+      # ---------------------------------------------------------
+      - name: Prepare Firefox Build
+        run: |
+          mkdir -p dist/firefox
+          cp -r src/* dist/firefox/
+          # Remove Chrome manifest, Rename Firefox manifest
+          rm dist/firefox/manifest-chrome.json
+          mv dist/firefox/manifest-firefox.json dist/firefox/manifest.json
+
+      - name: Zip Firefox Extension
+        run: |
+          cd dist/firefox
+          zip -r ../../dock-firefox-v1.6.zip .
+
+      # ---------------------------------------------------------
+      # UPLOAD ARTIFACTS
+      # ---------------------------------------------------------
+      - name: Upload Chrome Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-zip
+          path: dock-chrome-v1.6.zip
+
+      - name: Upload Firefox Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-extension-zip
+          path: dock-firefox-v1.6.zip
