@@ -4,7 +4,8 @@
   --accent-color: #007aff; 
 }
 
-/* --- UNIVERSAL FONT FIX (Added for Chrome/Firefox Consistency) --- */
+/* --- UNIVERSAL FONT FIX --- */
+/* Forces all Dock elements to use the System Sans-Serif font */
 #my-mac-dock, 
 .dock-context-menu, 
 .dock-stack,
@@ -27,6 +28,7 @@
 }
 #my-mac-dock::-webkit-scrollbar { display: none; }
 
+/* 1. LEFT SIDE (Vertical) */
 #my-mac-dock.left-side {
   top: var(--dock-offset); left: 0; right: auto; bottom: auto;
   flex-direction: column; align-items: flex-start;
@@ -34,6 +36,7 @@
 }
 #my-mac-dock.left-side.dock-visible { transform: translateY(-50%) translateX(0); }
 
+/* 2. RIGHT SIDE (Vertical) */
 #my-mac-dock.right-side {
   top: var(--dock-offset); right: 0; left: auto; bottom: auto;
   flex-direction: column; align-items: flex-end;
@@ -41,6 +44,7 @@
 }
 #my-mac-dock.right-side.dock-visible { transform: translateY(-50%) translateX(0); }
 
+/* 3. BOTTOM (Horizontal) */
 #my-mac-dock.bottom-side {
   left: var(--dock-offset); bottom: 0; top: auto; right: auto;
   flex-direction: row; align-items: flex-end;
@@ -48,6 +52,7 @@
 }
 #my-mac-dock.bottom-side.dock-visible { transform: translateX(-50%) translateY(0); }
 
+/* 4. TOP (Horizontal) */
 #my-mac-dock.top-side {
   left: var(--dock-offset); top: 0; bottom: auto; right: auto;
   flex-direction: row; align-items: flex-start;
@@ -56,7 +61,7 @@
 #my-mac-dock.top-side.dock-visible { transform: translateX(-50%) translateY(0); }
 
 
-/* --- HANDLER --- */
+/* --- HANDLER (The Trigger Bar) --- */
 .dock-handler {
   position: absolute; 
   background: rgba(100, 100, 100, 0.4);
@@ -66,18 +71,22 @@
   background-position: center; background-repeat: no-repeat;
 }
 
+/* Vertical Handlers */
 #my-mac-dock.left-side .dock-handler, #my-mac-dock.right-side .dock-handler {
     width: 14px; height: 60px; top: 50%; transform: translateY(-50%);
 }
 #my-mac-dock.left-side .dock-handler { right: -24px; border-radius: 0 10px 10px 0; }
 #my-mac-dock.right-side .dock-handler { left: -24px; border-radius: 10px 0 0 10px; }
 
+/* Horizontal Handlers */
 #my-mac-dock.top-side .dock-handler, #my-mac-dock.bottom-side .dock-handler {
     width: 60px; height: 14px; left: 50%; transform: translateX(-50%);
 }
 #my-mac-dock.bottom-side .dock-handler { top: -24px; border-radius: 10px 10px 0 0; }
 #my-mac-dock.top-side .dock-handler { bottom: -24px; border-radius: 0 0 10px 10px; }
 
+
+/* Handler Icon Style */
 .dock-handler.has-icon {
   width: 40px !important; height: 40px !important;
   background-color: rgba(255, 255, 255, 0.15) !important; 
@@ -104,12 +113,20 @@
   display: flex; align-items: center; justify-content: center;
   position: relative;
   z-index: 1;
-  transition: margin 0.1s;
   user-select: none;
   cursor: pointer;
   will-change: width, height; 
+  /* Default: No transition on width/height for snappy Fisheye effect */
+  transition: margin 0.1s; 
   /* Inherit font fix */
   font-family: inherit;
+}
+
+/* NEW: When mouse leaves, smooth out the shrink animation */
+#my-mac-dock.dock-idle .dock-item {
+  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1), 
+              height 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+              margin 0.1s;
 }
 
 /* --- IMAGE --- */
@@ -149,6 +166,7 @@
   font-family: inherit;
 }
 
+/* Tooltip Positions */
 #my-mac-dock.left-side.tooltips-enabled .dock-item:hover::after { left: 110%; top: 50%; transform: translateY(-50%); border-left: 3px solid #fff; }
 #my-mac-dock.left-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-left: 3px solid var(--accent-color); }
 
@@ -221,6 +239,7 @@
     width: auto; padding: 4px 8px; margin: 0 8px; writing-mode: vertical-rl; text-orientation: mixed;
 }
 
+/* Style Classes */
 #my-mac-dock.theme-enabled .style-glass { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9); background: rgba(0, 0, 0, 0.3); border-color: var(--accent-color); }
 #my-mac-dock.theme-enabled .style-neon { color: #fff; text-shadow: 0 0 5px var(--accent-color); background: rgba(0,0,0,0.6); border: 1px solid var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
 #my-mac-dock.theme-enabled .style-minimal { color: rgba(255,255,255,0.8); background: transparent; border: none; border-left: 2px solid rgba(255,255,255,0.3); }
