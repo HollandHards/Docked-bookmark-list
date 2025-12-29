@@ -1,80 +1,64 @@
-name: Build Extensions
+name: Publish Release
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    tags:
+      - 'v*' # Triggers only when you push a tag like v1.6, v1.7, etc.
+
+permissions:
+  contents: write # Required to create a Release
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. GET VERSION
+      # 1. GET VERSION FROM MANIFEST
       - name: Extract Version
         id: get_version
         run: |
           VERSION=$(jq -r .version src/manifest-chrome.json)
-          echo "Detected Version: $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      # 2. DEBUG: Verify Source Files (Check logs if images are missing here)
-      - name: List Source Files
-        run: ls -R src
-
-      # ---------------------------------------------------------
-      # 3. BUILD CHROME
-      # ---------------------------------------------------------
-      - name: Prepare Chrome Build
+      # 2. BUILD CHROME
+      - name: Build Chrome
         run: |
           mkdir -p dist/chrome
-          # safer copy command that includes everything
           cp -a src/. dist/chrome/
-          
-          # Clean up manifests
           rm dist/chrome/manifest-firefox.json
           mv dist/chrome/manifest-chrome.json dist/chrome/manifest.json
-          
-          # DEBUG: Verify Dist Content
-          echo "Contents of Chrome Build:"
-          ls -la dist/chrome
-
-      - name: Zip Chrome Extension
-        run: |
           cd dist/chrome
           zip -r ../../VerticalDock-Chrome-v${{ env.VERSION }}.zip .
 
-      # ---------------------------------------------------------
-      # 4. BUILD FIREFOX
-      # ---------------------------------------------------------
-      - name: Prepare Firefox Build
+      # 3. BUILD FIREFOX
+      - name: Build Firefox
         run: |
           mkdir -p dist/firefox
           cp -a src/. dist/firefox/
-          
-          # Clean up manifests
           rm dist/firefox/manifest-chrome.json
           mv dist/firefox/manifest-firefox.json dist/firefox/manifest.json
-
-      - name: Zip Firefox Extension
-        run: |
           cd dist/firefox
           zip -r ../../VerticalDock-Firefox-v${{ env.VERSION }}.zip .
 
-      # ---------------------------------------------------------
-      # 5. UPLOAD ARTIFACTS
-      # ---------------------------------------------------------
-      - name: Upload Chrome Build
-        uses: actions/upload-artifact@v4
+      # 4. CREATE PUBLIC RELEASE
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: VerticalDock-Chrome-v${{ env.VERSION }}
-          path: VerticalDock-Chrome-v${{ env.VERSION }}.zip
-
-      - name: Upload Firefox Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: VerticalDock-Firefox-v${{ env.VERSION }}
-          path: VerticalDock-Firefox-v${{ env.VERSION }}.zip
+          files: |
+            VerticalDock-Chrome-v${{ env.VERSION }}.zip
+            VerticalDock-Firefox-v${{ env.VERSION }}.zip
+          name: Release v${{ env.VERSION }}
+          body: |
+            ## Vertical Bookmark Dock v${{ env.VERSION }}
+            
+            **Changes in this version:**
+            - Auto-generated release.
+            
+            **Installation:**
+            - **Chrome:** Download the Chrome zip, unzip it, and load unpacked in `chrome://extensions`.
+            - **Firefox:** Download the Firefox zip and load it in `about:debugging`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
