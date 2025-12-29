@@ -1,5 +1,6 @@
 let dockContainer = null;
 let isDockVisible = false;
+let hideTimer = null; // New timer for reliable closing
 let settings = {
   dockPosition: 'left', dockSize: 48, edgeTrigger: false, handlerIcon: '',
   accentColor: '#007aff', showTooltips: true, separatorStyle: 'glass',
@@ -10,30 +11,36 @@ function initDock() {
   if (document.getElementById('my-mac-dock')) return;
   dockContainer = document.createElement('div');
   dockContainer.id = 'my-mac-dock';
-  dockContainer.classList.add('left-side', 'dock-idle'); // Start idle
+  dockContainer.classList.add('left-side', 'dock-idle'); 
   
   const handler = document.createElement('div');
   handler.className = 'dock-handler';
   handler.title = "Hover to open Dock";
+  
+  // Handle Opening
   handler.addEventListener('mouseenter', () => openDock());
   handler.addEventListener('click', (e) => { e.stopPropagation(); openDock(); });
   
   dockContainer.appendChild(handler);
   document.body.appendChild(dockContainer);
   
+  // Global Click Listener (Close if clicked outside)
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.dock-stack') && !e.target.closest('.dock-item')) {
+    if (!e.target.closest('.dock-stack') && !e.target.closest('.dock-item') && !e.target.closest('.dock-handler')) {
       closeAllStacks();
+      // If clicking outside, close the dock too
+      if(isDockVisible) toggleDock(false);
     }
     closeContextMenu();
   });
   
-  // 1. MOUSE ENTER: Remove smooth transition for snappy fisheye
+  // 1. MOUSE ENTER: Stop closing, wake up animations
   dockContainer.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimer); // Stop it from closing
     dockContainer.classList.remove('dock-idle');
   });
 
-  // 2. MOUSE MOVE: Fisheye Logic
+  // 2. MOUSE MOVE: Fisheye Animation
   dockContainer.addEventListener('mousemove', (e) => {
     if (!isDockVisible) return;
     const items = dockContainer.querySelectorAll('.dock-item');
@@ -56,16 +63,23 @@ function initDock() {
     });
   });
 
-  // 3. MOUSE LEAVE: Restore smooth transition and reset sizes
+  // 3. MOUSE LEAVE: Start the Close Timer
   dockContainer.addEventListener('mouseleave', () => {
-    dockContainer.classList.add('dock-idle'); // Enable smooth shrink
+    dockContainer.classList.add('dock-idle'); 
     resetIcons();
+    
+    // Wait 0.5s, then close. If mouse comes back, this is cancelled.
+    hideTimer = setTimeout(() => {
+        // Don't close if a Stack or Context Menu is currently open!
+        if (!document.querySelector('.dock-stack') && !document.querySelector('.dock-context-menu')) {
+            toggleDock(false);
+        }
+    }, 500); 
   });
 
   refreshSettings();
 }
 
-// Helper to force icons back to normal size
 function resetIcons() {
   if (!dockContainer) return;
   const items = dockContainer.querySelectorAll('.dock-item');
@@ -76,6 +90,7 @@ function resetIcons() {
 }
 
 function openDock() {
+  clearTimeout(hideTimer); // Ensure we don't close immediately if just opened
   if (dockContainer.querySelectorAll('.dock-item').length === 0) {
     DockAPI.runtime.sendMessage({ action: "get_bookmarks_for_mouse" }).then((response) => {
       if (response && response.data) { renderBookmarks(response.data); toggleDock(true); }
@@ -119,8 +134,6 @@ function refreshSettings() {
       if (settings.handlerIcon && settings.handlerIcon.trim() !== '') handler.style.backgroundImage = `url('${settings.handlerIcon}')`;
       else handler.style.backgroundImage = `url('${DockAPI.runtime.getURL("icon.png")}')`;
     }
-    
-    // Safety reset when settings change
     resetIcons();
   });
 }
@@ -130,14 +143,13 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "refresh_dock") { renderBookmarks(request.data); refreshSettings(); }
 });
 
-// GLOBAL MOUSE TRACKER (Safety Net)
+// GLOBAL MOUSE TRACKER (Only for Opening via Edge)
 document.addEventListener('mousemove', (e) => {
-  if (!dockContainer || !isDockVisible) return;
-
-  const edgeThreshold = 15; const hideThreshold = 250; 
+  if (!dockContainer) return;
   
-  // 1. Auto-Open Logic (if edgeTrigger is on)
+  // Only handle Auto-OPEN here. Auto-CLOSE is now handled by mouseleave above.
   if (settings.edgeTrigger && !isDockVisible) {
+    const edgeThreshold = 15;
     let hitEdge = false;
     if (settings.dockPosition === 'left' && e.clientX < edgeThreshold) hitEdge = true;
     if (settings.dockPosition === 'right' && e.clientX > window.innerWidth - edgeThreshold) hitEdge = true;
@@ -145,35 +157,16 @@ document.addEventListener('mousemove', (e) => {
     if (settings.dockPosition === 'bottom' && e.clientY > window.innerHeight - edgeThreshold) hitEdge = true;
     if (hitEdge) openDock();
   } 
-
-  // 2. Auto-Hide & Reset Logic
-  let shouldHide = false;
-  let dist = 0;
-  
-  // Calculate distance from dock edge to mouse
-  if (settings.dockPosition === 'left') dist = e.clientX - settings.dockSize;
-  if (settings.dockPosition === 'right') dist = (window.innerWidth - settings.dockSize) - e.clientX;
-  if (settings.dockPosition === 'top') dist = e.clientY - settings.dockSize;
-  if (settings.dockPosition === 'bottom') dist = (window.innerHeight - settings.dockSize) - e.clientY;
-
-  // Safety Reset: If mouse is 100px away, force reset icons (fixes stuck fisheye)
-  if (dist > 100) {
-     if (!dockContainer.classList.contains('dock-idle')) {
-         dockContainer.classList.add('dock-idle');
-         resetIcons();
-     }
-  }
-
-  // Hide logic
-  if (settings.edgeTrigger && dist > hideThreshold) {
-      toggleDock(false);
-  }
 });
 
 function toggleDock(show) {
   isDockVisible = show;
   if (show) dockContainer.classList.add('dock-visible');
-  else { dockContainer.classList.remove('dock-visible'); closeAllStacks(); closeContextMenu(); }
+  else { 
+      dockContainer.classList.remove('dock-visible'); 
+      closeAllStacks(); 
+      closeContextMenu(); 
+  }
 }
 
 function closeAllStacks() { const stacks = document.querySelectorAll('.dock-stack'); stacks.forEach(s => s.remove()); }
@@ -181,9 +174,18 @@ function closeContextMenu() { const existing = document.querySelector('.dock-con
 
 function showContextMenu(e, bm) {
   e.preventDefault(); closeContextMenu();
+  // Pauses auto-hide while menu is open
+  clearTimeout(hideTimer); 
+  
   const menu = document.createElement('div');
   menu.className = 'dock-context-menu';
   menu.style.setProperty('--accent-color', settings.accentColor);
+  
+  // Re-enable auto-hide if mouse leaves the menu
+  menu.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => { toggleDock(false); }, 500);
+  });
+  menu.addEventListener('mouseenter', () => clearTimeout(hideTimer));
 
   const addItem = (text, onClick, isDestructive = false) => {
     const item = document.createElement('div');
@@ -277,8 +279,14 @@ function toggleStack(bookmark, anchorElement) {
   const existing = document.querySelector(`.dock-stack[data-parent="${bookmark.id}"]`);
   if (existing) { existing.remove(); return; }
   closeAllStacks(); 
+  clearTimeout(hideTimer); // Keep dock open while stack is opening
+
   const stack = document.createElement('div'); stack.className = 'dock-stack';
   stack.dataset.parent = bookmark.id; stack.style.setProperty('--accent-color', settings.accentColor);
+  
+  // Keep open while hovering stack
+  stack.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+  stack.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => toggleDock(false), 500); });
   
   if (bookmark.children && bookmark.children.length > 0) {
     bookmark.children.forEach(child => {
