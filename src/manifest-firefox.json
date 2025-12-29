@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Vertical Bookmark Dock",
-  "version": "1.6",
+  "version": "1.7",
   "description": "A customizable Mac-style dock for bookmarks.",
   "permissions": ["storage", "activeTab", "scripting", "bookmarks", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "browser_specific_settings": {
     "gecko": { "id": "vertical-dock@yourdomain.com", "strict_min_version": "109.0" }
   },
-  "chrome_url_overrides": { "newtab": "newtab.html" },
+  
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
