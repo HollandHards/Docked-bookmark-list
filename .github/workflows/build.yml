@@ -1,26 +1,27 @@
-name: Publish Release
+name: Attach Zips to Release
 
+# Trigger ONLY when you click "Publish release" on the website
 on:
-  push:
-    tags:
-      - 'v*' # Triggers only when you push a tag like v1.6, v1.7, etc.
+  release:
+    types: [published]
 
 permissions:
-  contents: write # Required to create a Release
+  contents: write
 
 jobs:
-  build-and-release:
+  build-and-upload:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. GET VERSION FROM MANIFEST
-      - name: Extract Version
+      # 1. GET VERSION FROM TAG (e.g., refs/tags/v1.6 -> 1.6)
+      - name: Get Version
         id: get_version
         run: |
-          VERSION=$(jq -r .version src/manifest-chrome.json)
+          # Strip 'refs/tags/v' from the tag name
+          VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       # 2. BUILD CHROME
@@ -43,22 +44,12 @@ jobs:
           cd dist/firefox
           zip -r ../../VerticalDock-Firefox-v${{ env.VERSION }}.zip .
 
-      # 4. CREATE PUBLIC RELEASE
-      - name: Create Release
+      # 4. UPLOAD TO THE RELEASE
+      - name: Upload Assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
             VerticalDock-Chrome-v${{ env.VERSION }}.zip
             VerticalDock-Firefox-v${{ env.VERSION }}.zip
-          name: Release v${{ env.VERSION }}
-          body: |
-            ## Vertical Bookmark Dock v${{ env.VERSION }}
-            
-            **Changes in this version:**
-            - Auto-generated release.
-            
-            **Installation:**
-            - **Chrome:** Download the Chrome zip, unzip it, and load unpacked in `chrome://extensions`.
-            - **Firefox:** Download the Firefox zip and load it in `about:debugging`.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
