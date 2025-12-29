@@ -13,49 +13,68 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 1. GET VERSION
+      - name: Extract Version
+        id: get_version
+        run: |
+          VERSION=$(jq -r .version src/manifest-chrome.json)
+          echo "Detected Version: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      # 2. DEBUG: Verify Source Files (Check logs if images are missing here)
+      - name: List Source Files
+        run: ls -R src
+
       # ---------------------------------------------------------
-      # BUILD CHROME VERSION
+      # 3. BUILD CHROME
       # ---------------------------------------------------------
       - name: Prepare Chrome Build
         run: |
           mkdir -p dist/chrome
-          cp -r src/* dist/chrome/
-          # Remove Firefox manifest, Rename Chrome manifest
+          # safer copy command that includes everything
+          cp -a src/. dist/chrome/
+          
+          # Clean up manifests
           rm dist/chrome/manifest-firefox.json
           mv dist/chrome/manifest-chrome.json dist/chrome/manifest.json
+          
+          # DEBUG: Verify Dist Content
+          echo "Contents of Chrome Build:"
+          ls -la dist/chrome
 
       - name: Zip Chrome Extension
         run: |
           cd dist/chrome
-          zip -r ../../dock-chrome-v1.6.zip .
-      
+          zip -r ../../VerticalDock-Chrome-v${{ env.VERSION }}.zip .
+
       # ---------------------------------------------------------
-      # BUILD FIREFOX VERSION
+      # 4. BUILD FIREFOX
       # ---------------------------------------------------------
       - name: Prepare Firefox Build
         run: |
           mkdir -p dist/firefox
-          cp -r src/* dist/firefox/
-          # Remove Chrome manifest, Rename Firefox manifest
+          cp -a src/. dist/firefox/
+          
+          # Clean up manifests
           rm dist/firefox/manifest-chrome.json
           mv dist/firefox/manifest-firefox.json dist/firefox/manifest.json
 
       - name: Zip Firefox Extension
         run: |
           cd dist/firefox
-          zip -r ../../dock-firefox-v1.6.zip .
+          zip -r ../../VerticalDock-Firefox-v${{ env.VERSION }}.zip .
 
       # ---------------------------------------------------------
-      # UPLOAD ARTIFACTS
+      # 5. UPLOAD ARTIFACTS
       # ---------------------------------------------------------
       - name: Upload Chrome Build
         uses: actions/upload-artifact@v4
         with:
-          name: chrome-extension-zip
-          path: dock-chrome-v1.6.zip
+          name: VerticalDock-Chrome-v${{ env.VERSION }}
+          path: VerticalDock-Chrome-v${{ env.VERSION }}.zip
 
       - name: Upload Firefox Build
         uses: actions/upload-artifact@v4
         with:
-          name: firefox-extension-zip
-          path: dock-firefox-v1.6.zip
+          name: VerticalDock-Firefox-v${{ env.VERSION }}
+          path: VerticalDock-Firefox-v${{ env.VERSION }}.zip
