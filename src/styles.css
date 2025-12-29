@@ -4,6 +4,16 @@
   --accent-color: #007aff; 
 }
 
+/* --- UNIVERSAL FONT FIX (Added for Chrome/Firefox Consistency) --- */
+#my-mac-dock, 
+.dock-context-menu, 
+.dock-stack,
+.dock-handler {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* --- DOCK CONTAINER --- */
 #my-mac-dock {
   position: fixed;
@@ -17,7 +27,6 @@
 }
 #my-mac-dock::-webkit-scrollbar { display: none; }
 
-/* 1. LEFT SIDE (Vertical) */
 #my-mac-dock.left-side {
   top: var(--dock-offset); left: 0; right: auto; bottom: auto;
   flex-direction: column; align-items: flex-start;
@@ -25,7 +34,6 @@
 }
 #my-mac-dock.left-side.dock-visible { transform: translateY(-50%) translateX(0); }
 
-/* 2. RIGHT SIDE (Vertical) */
 #my-mac-dock.right-side {
   top: var(--dock-offset); right: 0; left: auto; bottom: auto;
   flex-direction: column; align-items: flex-end;
@@ -33,7 +41,6 @@
 }
 #my-mac-dock.right-side.dock-visible { transform: translateY(-50%) translateX(0); }
 
-/* 3. BOTTOM (Horizontal) */
 #my-mac-dock.bottom-side {
   left: var(--dock-offset); bottom: 0; top: auto; right: auto;
   flex-direction: row; align-items: flex-end;
@@ -41,7 +48,6 @@
 }
 #my-mac-dock.bottom-side.dock-visible { transform: translateX(-50%) translateY(0); }
 
-/* 4. TOP (Horizontal) */
 #my-mac-dock.top-side {
   left: var(--dock-offset); top: 0; bottom: auto; right: auto;
   flex-direction: row; align-items: flex-start;
@@ -50,7 +56,7 @@
 #my-mac-dock.top-side.dock-visible { transform: translateX(-50%) translateY(0); }
 
 
-/* --- HANDLER (The Trigger Bar) --- */
+/* --- HANDLER --- */
 .dock-handler {
   position: absolute; 
   background: rgba(100, 100, 100, 0.4);
@@ -60,22 +66,18 @@
   background-position: center; background-repeat: no-repeat;
 }
 
-/* Vertical Handlers */
 #my-mac-dock.left-side .dock-handler, #my-mac-dock.right-side .dock-handler {
     width: 14px; height: 60px; top: 50%; transform: translateY(-50%);
 }
 #my-mac-dock.left-side .dock-handler { right: -24px; border-radius: 0 10px 10px 0; }
 #my-mac-dock.right-side .dock-handler { left: -24px; border-radius: 10px 0 0 10px; }
 
-/* Horizontal Handlers */
 #my-mac-dock.top-side .dock-handler, #my-mac-dock.bottom-side .dock-handler {
     width: 60px; height: 14px; left: 50%; transform: translateX(-50%);
 }
 #my-mac-dock.bottom-side .dock-handler { top: -24px; border-radius: 10px 10px 0 0; }
 #my-mac-dock.top-side .dock-handler { bottom: -24px; border-radius: 0 0 10px 10px; }
 
-
-/* Handler Icon Style */
 .dock-handler.has-icon {
   width: 40px !important; height: 40px !important;
   background-color: rgba(255, 255, 255, 0.15) !important; 
@@ -85,7 +87,6 @@
   background-size: 70%;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
-/* Adjust positions for icon handlers */
 #my-mac-dock.left-side .dock-handler.has-icon { right: -40px; }
 #my-mac-dock.right-side .dock-handler.has-icon { left: -40px; }
 #my-mac-dock.bottom-side .dock-handler.has-icon { top: -40px; }
@@ -107,6 +108,8 @@
   user-select: none;
   cursor: pointer;
   will-change: width, height; 
+  /* Inherit font fix */
+  font-family: inherit;
 }
 
 /* --- IMAGE --- */
@@ -142,22 +145,19 @@
   content: attr(title); position: absolute; 
   background: rgba(0,0,0,0.8); color: #fff; padding: 4px 8px; border-radius: 4px;
   font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 1; z-index: 100;
+  /* Inherit font fix */
+  font-family: inherit;
 }
 
-/* Tooltip Positions based on Dock Side */
-/* Left Dock (Tooltip on Right) */
 #my-mac-dock.left-side.tooltips-enabled .dock-item:hover::after { left: 110%; top: 50%; transform: translateY(-50%); border-left: 3px solid #fff; }
 #my-mac-dock.left-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-left: 3px solid var(--accent-color); }
 
-/* Right Dock (Tooltip on Left) */
 #my-mac-dock.right-side.tooltips-enabled .dock-item:hover::after { right: 110%; top: 50%; transform: translateY(-50%); border-right: 3px solid #fff; }
 #my-mac-dock.right-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-right: 3px solid var(--accent-color); }
 
-/* Bottom Dock (Tooltip Above) */
 #my-mac-dock.bottom-side.tooltips-enabled .dock-item:hover::after { bottom: 110%; left: 50%; transform: translateX(-50%); border-bottom: 3px solid #fff; }
 #my-mac-dock.bottom-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-bottom: 3px solid var(--accent-color); }
 
-/* Top Dock (Tooltip Below) */
 #my-mac-dock.top-side.tooltips-enabled .dock-item:hover::after { top: 110%; left: 50%; transform: translateX(-50%); border-top: 3px solid #fff; }
 #my-mac-dock.top-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-top: 3px solid var(--accent-color); }
 
@@ -206,7 +206,6 @@
 
 /* --- SEPARATORS --- */
 .dock-spacer { background: rgba(0,0,0,0.3); margin: 5px 0; }
-/* Horizontal dock needs vertical spacer lines */
 #my-mac-dock.left-side .dock-spacer, #my-mac-dock.right-side .dock-spacer { width: 100%; height: 2px; }
 #my-mac-dock.top-side .dock-spacer, #my-mac-dock.bottom-side .dock-spacer { height: 100%; width: 2px; margin: 0 5px; }
 
@@ -214,15 +213,14 @@
   font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
   text-align: center; pointer-events: none; border-radius: 4px;
   color: #ddd; background: rgba(0, 0, 0, 0.3); border: 2px solid #555;
-  /* Orientation changes */
-  padding: 4px 0; margin: 8px 0; width: 100%; /* Default vertical */
+  padding: 4px 0; margin: 8px 0; width: 100%; 
+  /* Inherit font fix */
+  font-family: inherit;
 }
-/* Horizontal header adjustments */
 #my-mac-dock.top-side .dock-section-header, #my-mac-dock.bottom-side .dock-section-header {
     width: auto; padding: 4px 8px; margin: 0 8px; writing-mode: vertical-rl; text-orientation: mixed;
 }
 
-/* Style Classes */
 #my-mac-dock.theme-enabled .style-glass { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9); background: rgba(0, 0, 0, 0.3); border-color: var(--accent-color); }
 #my-mac-dock.theme-enabled .style-neon { color: #fff; text-shadow: 0 0 5px var(--accent-color); background: rgba(0,0,0,0.6); border: 1px solid var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
 #my-mac-dock.theme-enabled .style-minimal { color: rgba(255,255,255,0.8); background: transparent; border: none; border-left: 2px solid rgba(255,255,255,0.3); }
