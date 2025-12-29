@@ -1,13 +1,17 @@
 // adapter.js
+// Detect if we are in Firefox (browser namespace exists)
 const isFirefox = (typeof browser !== 'undefined');
 
-// If Firefox, we just alias the browser object
+// SERVICE WORKER FIX: Use 'globalThis' instead of 'window'
+// Chrome Service Workers do not have access to 'window'.
+const scope = typeof globalThis !== 'undefined' ? globalThis : self;
+
 if (isFirefox) {
-  window.DockAPI = browser;
+  scope.DockAPI = browser;
 } 
-// If Chrome, we create the wrapper
 else {
-  window.DockAPI = {
+  // Chrome Adapter
+  scope.DockAPI = {
     runtime: {
       getURL: (path) => chrome.runtime.getURL(path),
       openOptionsPage: () => chrome.runtime.openOptionsPage(),
@@ -16,9 +20,10 @@ else {
         addListener: (callback) => {
           chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const result = callback(request, sender);
+            // If the callback returns a Promise, handle it for Chrome's sendResponse
             if (result && typeof result.then === 'function') {
               result.then(sendResponse);
-              return true; // Keep channel open for Chrome
+              return true; // Keep the message channel open for async response
             }
           });
         }
