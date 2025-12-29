@@ -10,7 +10,7 @@ function initDock() {
   if (document.getElementById('my-mac-dock')) return;
   dockContainer = document.createElement('div');
   dockContainer.id = 'my-mac-dock';
-  dockContainer.classList.add('left-side');
+  dockContainer.classList.add('left-side', 'dock-idle'); // Start idle
   
   const handler = document.createElement('div');
   handler.className = 'dock-handler';
@@ -28,6 +28,12 @@ function initDock() {
     closeContextMenu();
   });
   
+  // 1. MOUSE ENTER: Remove smooth transition for snappy fisheye
+  dockContainer.addEventListener('mouseenter', () => {
+    dockContainer.classList.remove('dock-idle');
+  });
+
+  // 2. MOUSE MOVE: Fisheye Logic
   dockContainer.addEventListener('mousemove', (e) => {
     if (!isDockVisible) return;
     const items = dockContainer.querySelectorAll('.dock-item');
@@ -50,11 +56,23 @@ function initDock() {
     });
   });
 
+  // 3. MOUSE LEAVE: Restore smooth transition and reset sizes
   dockContainer.addEventListener('mouseleave', () => {
-    const items = dockContainer.querySelectorAll('.dock-item');
-    items.forEach(item => { item.style.width = `${settings.dockSize}px`; item.style.height = `${settings.dockSize}px`; });
+    dockContainer.classList.add('dock-idle'); // Enable smooth shrink
+    resetIcons();
   });
+
   refreshSettings();
+}
+
+// Helper to force icons back to normal size
+function resetIcons() {
+  if (!dockContainer) return;
+  const items = dockContainer.querySelectorAll('.dock-item');
+  items.forEach(item => { 
+    item.style.width = `${settings.dockSize}px`; 
+    item.style.height = `${settings.dockSize}px`; 
+  });
 }
 
 function openDock() {
@@ -101,6 +119,9 @@ function refreshSettings() {
       if (settings.handlerIcon && settings.handlerIcon.trim() !== '') handler.style.backgroundImage = `url('${settings.handlerIcon}')`;
       else handler.style.backgroundImage = `url('${DockAPI.runtime.getURL("icon.png")}')`;
     }
+    
+    // Safety reset when settings change
+    resetIcons();
   });
 }
 
@@ -109,10 +130,14 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "refresh_dock") { renderBookmarks(request.data); refreshSettings(); }
 });
 
+// GLOBAL MOUSE TRACKER (Safety Net)
 document.addEventListener('mousemove', (e) => {
-  if (!settings.edgeTrigger) return;
+  if (!dockContainer || !isDockVisible) return;
+
   const edgeThreshold = 15; const hideThreshold = 250; 
-  if (!isDockVisible) {
+  
+  // 1. Auto-Open Logic (if edgeTrigger is on)
+  if (settings.edgeTrigger && !isDockVisible) {
     let hitEdge = false;
     if (settings.dockPosition === 'left' && e.clientX < edgeThreshold) hitEdge = true;
     if (settings.dockPosition === 'right' && e.clientX > window.innerWidth - edgeThreshold) hitEdge = true;
@@ -120,13 +145,28 @@ document.addEventListener('mousemove', (e) => {
     if (settings.dockPosition === 'bottom' && e.clientY > window.innerHeight - edgeThreshold) hitEdge = true;
     if (hitEdge) openDock();
   } 
-  else if (isDockVisible) {
-    let shouldHide = false;
-    if (settings.dockPosition === 'left' && e.clientX > (settings.dockSize + hideThreshold)) shouldHide = true;
-    if (settings.dockPosition === 'right' && e.clientX < (window.innerWidth - (settings.dockSize + hideThreshold))) shouldHide = true;
-    if (settings.dockPosition === 'top' && e.clientY > (settings.dockSize + hideThreshold)) shouldHide = true;
-    if (settings.dockPosition === 'bottom' && e.clientY < (window.innerHeight - (settings.dockSize + hideThreshold))) shouldHide = true;
-    if (shouldHide) toggleDock(false);
+
+  // 2. Auto-Hide & Reset Logic
+  let shouldHide = false;
+  let dist = 0;
+  
+  // Calculate distance from dock edge to mouse
+  if (settings.dockPosition === 'left') dist = e.clientX - settings.dockSize;
+  if (settings.dockPosition === 'right') dist = (window.innerWidth - settings.dockSize) - e.clientX;
+  if (settings.dockPosition === 'top') dist = e.clientY - settings.dockSize;
+  if (settings.dockPosition === 'bottom') dist = (window.innerHeight - settings.dockSize) - e.clientY;
+
+  // Safety Reset: If mouse is 100px away, force reset icons (fixes stuck fisheye)
+  if (dist > 100) {
+     if (!dockContainer.classList.contains('dock-idle')) {
+         dockContainer.classList.add('dock-idle');
+         resetIcons();
+     }
+  }
+
+  // Hide logic
+  if (settings.edgeTrigger && dist > hideThreshold) {
+      toggleDock(false);
   }
 });
 
