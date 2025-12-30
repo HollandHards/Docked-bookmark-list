@@ -30,7 +30,7 @@ Vertical Bookmark Dock replaces the static, cluttered bookmarks bar with a moder
 
 ### Option 1: Download Release (Recommended)
 
-1. Go to the **[suspicious link removed]** page of this repository.
+1. Go to the https://github.com/HollandHards/Docked-bookmark-list/ page of this repository.
 2. Download the ZIP file for your browser (`VerticalDock-Chrome-vX.X.zip` or `VerticalDock-Firefox-vX.X.zip`).
 
 ### Option 2: Install from Source
