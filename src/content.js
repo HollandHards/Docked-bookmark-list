@@ -9,9 +9,6 @@ let settings = {
   backdropBlur: 10, iconShape: '12px', idleOpacity: 100
 };
 
-// ... [Keep initDock() and other functions EXACTLY as they were] ...
-// I am only pasting the UPDATED refreshSettings() and the rest of the file logic for context.
-
 function initDock() {
   if (document.getElementById('my-mac-dock')) return;
   dockContainer = document.createElement('div');
@@ -99,13 +96,11 @@ function openDock() {
   } else { toggleDock(true); }
 }
 
-// *** UPDATED FUNCTION TO APPLY VISUALS ***
 function refreshSettings() {
   DockAPI.storage.sync.get([
     'dockPosition', 'dockSize', 'edgeTrigger', 'verticalPos', 'handlerIcon', 
     'accentColor', 'showTooltips', 'separatorStyle', 'enableShadow', 
     'enableGlow', 'enableAccent', 'showSettings',
-    // NEW KEYS
     'backdropBlur', 'iconShape', 'idleOpacity'
   ]).then((res) => {
     settings.dockPosition = res.dockPosition || 'left';
@@ -119,15 +114,12 @@ function refreshSettings() {
     settings.enableGlow = (res.enableGlow !== false);
     settings.enableAccent = (res.enableAccent !== false);
     settings.showSettings = (res.showSettings !== false);
-
-    // NEW VISUAL VARIABLES
     settings.backdropBlur = (res.backdropBlur !== undefined) ? res.backdropBlur : 10;
     settings.iconShape = res.iconShape || '12px';
     settings.idleOpacity = (res.idleOpacity !== undefined) ? res.idleOpacity : 100;
 
     const vPos = res.verticalPos || 50;
     
-    // Apply CSS Variables for dynamic control
     dockContainer.style.setProperty('--dock-icon-size', settings.dockSize + 'px');
     dockContainer.style.setProperty('--dock-offset', vPos + '%');
     dockContainer.style.setProperty('--accent-color', settings.accentColor);
