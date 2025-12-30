@@ -102,7 +102,6 @@ function refreshSettings() {
     'enableGlow', 'enableAccent', 'showSettings',
     'backdropBlur', 'iconShape', 'idleOpacity'
   ]).then((res) => {
-    // 1. Load Defaults
     settings.dockPosition = res.dockPosition || 'left';
     settings.dockSize = parseInt(res.dockSize) || 48;
     settings.edgeTrigger = res.edgeTrigger === true;
@@ -120,7 +119,6 @@ function refreshSettings() {
     settings.idleOpacity = (res.idleOpacity !== undefined) ? res.idleOpacity : 100;
     const vPos = res.verticalPos || 50;
 
-    // 2. Apply CSS Variables
     dockContainer.style.setProperty('--dock-icon-size', settings.dockSize + 'px');
     dockContainer.style.setProperty('--dock-offset', vPos + '%');
     dockContainer.style.setProperty('--accent-color', settings.accentColor);
@@ -128,24 +126,20 @@ function refreshSettings() {
     dockContainer.style.setProperty('--icon-radius', settings.iconShape);
     dockContainer.style.setProperty('--idle-opacity', settings.idleOpacity / 100);
     
-    // 3. Apply Position Classes
     dockContainer.classList.remove('left-side', 'right-side', 'top-side', 'bottom-side');
     if(settings.dockPosition === 'right') dockContainer.classList.add('right-side');
     else if(settings.dockPosition === 'bottom') dockContainer.classList.add('bottom-side');
     else if(settings.dockPosition === 'top') dockContainer.classList.add('top-side');
     else dockContainer.classList.add('left-side');
 
-    // 4. Apply Feature Flags
     if (settings.showTooltips) dockContainer.classList.add('tooltips-enabled'); else dockContainer.classList.remove('tooltips-enabled');
     if (settings.enableShadow) dockContainer.classList.add('shadow-enabled'); else dockContainer.classList.remove('shadow-enabled');
     if (settings.enableGlow) dockContainer.classList.add('glow-enabled'); else dockContainer.classList.remove('glow-enabled');
     if (settings.enableAccent) dockContainer.classList.add('theme-enabled'); else dockContainer.classList.remove('theme-enabled');
 
-    // 5. Apply Theme Style to Dock Container
     dockContainer.classList.remove('style-glass', 'style-neon', 'style-minimal', 'style-classic');
     dockContainer.classList.add('style-' + settings.separatorStyle);
 
-    // 6. Update Handler
     const handler = dockContainer.querySelector('.dock-handler');
     if (handler) {
       handler.classList.add('has-icon');
@@ -156,10 +150,29 @@ function refreshSettings() {
   });
 }
 
+// --- MESSAGE LISTENERS ---
 DockAPI.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "toggle_dock") { refreshSettings(); renderBookmarks(request.data); toggleDock(!isDockVisible); }
   if (request.action === "refresh_dock") { renderBookmarks(request.data); refreshSettings(); }
 });
+
+// --- LIVE SETTINGS LISTENER (NEW) ---
+// This watches for changes in Options Page and applies them instantly
+if (chrome.storage && chrome.storage.onChanged) {
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'sync') {
+      // 1. Always refresh visual settings (Position, Blur, Size, etc)
+      refreshSettings();
+      
+      // 2. Only re-fetch bookmarks if Icons or Data changed
+      if (changes.customIcons || changes.enableAccent) {
+         DockAPI.runtime.sendMessage({ action: "get_bookmarks_for_mouse" }).then((response) => {
+             if (response && response.data) renderBookmarks(response.data);
+         });
+      }
+    }
+  });
+}
 
 document.addEventListener('mousemove', (e) => {
   if (!dockContainer) return;
