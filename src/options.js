@@ -29,6 +29,52 @@ const addBtn = document.getElementById('addBtn');
 const DOCK_FOLDER_NAME = "Vertical-bookmark-list";
 let dragSrcId = null;
 
+// --- 1. DEFINITIONS (Defined first to prevent errors) ---
+
+function toggleColorInput(enabled) { 
+  if (colorContainer) { 
+    colorContainer.style.opacity = enabled ? '1' : '0.5'; 
+    colorContainer.style.pointerEvents = enabled ? 'auto' : 'none'; 
+  } 
+}
+
+function updateShortcutDisplay() {
+  if (!DockAPI || !DockAPI.commands) return;
+  DockAPI.commands.getAll().then((commands) => {
+    const command = commands.find(c => c.name === 'toggle_dock');
+    if (command && command.shortcut) { 
+        if(currentShortcut) currentShortcut.textContent = command.shortcut; 
+    } else { 
+        if(currentShortcut) currentShortcut.textContent = 'Not Set'; 
+    }
+  });
+}
+
+async function refreshList() {
+  const bookmarks = await getDockBookmarks();
+  const storage = await DockAPI.storage.sync.get(['customIcons']);
+  renderList(bookmarks, storage.customIcons || {});
+}
+
+async function getDockBookmarks() {
+  const tree = await DockAPI.bookmarks.getTree();
+  let dockFolder = findFolder(tree, DOCK_FOLDER_NAME);
+  if (!dockFolder) return [];
+  return await DockAPI.bookmarks.getChildren(dockFolder.id);
+}
+
+function findFolder(nodes, name) {
+  for (const node of nodes) {
+    if (node.title === name && !node.url) return node;
+    if (node.children) { 
+        const found = findFolder(node.children, name); 
+        if (found) return found; 
+    }
+  }
+  return null;
+}
+
+// --- 2. INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
   const storage = await DockAPI.storage.sync.get([
     'dockPosition', 'dockSize', 'customIcons', 'edgeTrigger', 
@@ -37,6 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     'enableGlow', 'enableAccent', 'backdropBlur', 'iconShape', 'idleOpacity'
   ]);
   
+  // Apply Settings
   if(posSelect) posSelect.value = storage.dockPosition || 'left';
   if(sizeSlider) { sizeSlider.value = storage.dockSize || 48; if(sizeValue) sizeValue.textContent = sizeSlider.value + 'px'; }
   if(edgeCheck) edgeCheck.checked = storage.edgeTrigger === true;
@@ -61,11 +108,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if(accentColorInput) accentColorInput.value = storage.accentColor || '#007aff';
   document.body.style.setProperty('--accent-color', accentColorInput.value);
 
-  updateShortcutDisplay(); refreshList(); 
+  // Now safe to call
+  updateShortcutDisplay(); 
+  refreshList(); 
 });
 
-function toggleColorInput(enabled) { if (colorContainer) { colorContainer.style.opacity = enabled ? '1' : '0.5'; colorContainer.style.pointerEvents = enabled ? 'auto' : 'none'; } }
-
+// --- 3. EVENT LISTENERS ---
 if(posSelect) posSelect.addEventListener('change', () => DockAPI.storage.sync.set({ dockPosition: posSelect.value }));
 if(sizeSlider) sizeSlider.addEventListener('input', (e) => { sizeValue.textContent = e.target.value + 'px'; DockAPI.storage.sync.set({ dockSize: e.target.value }); });
 if(edgeCheck) edgeCheck.addEventListener('change', () => DockAPI.storage.sync.set({ edgeTrigger: edgeCheck.checked }));
@@ -88,6 +136,7 @@ if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI
 if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
 window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
+// --- 4. ITEM MANAGEMENT ---
 if (itemTypeSelect) {
   itemTypeSelect.addEventListener('change', () => {
     const type = itemTypeSelect.value;
@@ -153,27 +202,6 @@ async function editBookmark(id, currentTitle, currentUrl) {
   try { await DockAPI.bookmarks.update(id, updates); refreshList(); } catch (e) { alert("Invalid URL."); }
 }
 
-async function refreshList() {
-  const bookmarks = await getDockBookmarks();
-  const storage = await DockAPI.storage.sync.get(['customIcons']);
-  renderList(bookmarks, storage.customIcons || {});
-}
-
-async function getDockBookmarks() {
-  const tree = await DockAPI.bookmarks.getTree();
-  let dockFolder = findFolder(tree, DOCK_FOLDER_NAME);
-  if (!dockFolder) return [];
-  return await DockAPI.bookmarks.getChildren(dockFolder.id);
-}
-
-function findFolder(nodes, name) {
-  for (const node of nodes) {
-    if (node.title === name && !node.url) return node;
-    if (node.children) { const found = findFolder(node.children, name); if (found) return found; }
-  }
-  return null;
-}
-
 function renderList(bookmarks, customIcons) {
   list.innerHTML = '';
   if (bookmarks.length === 0) { list.innerHTML = `<div style="padding:20px;">Folder <strong>"${DOCK_FOLDER_NAME}"</strong> empty. Add items above!</div>`; }
@@ -216,5 +244,4 @@ function renderList(bookmarks, customIcons) {
   });
 }
 
-function saveIcon(id, url) { DockAPI.storage.sync.get(['customIcons']).then((res) => { const icons = res.customIcons || {}; icons[id] = url; DockAPI.storage.sync.set({ customIcons: icons }).then(() => refreshList()); }); }
-window.resetIcon = function(id) { DockAPI.storage.sync.get(['customIcons']).then((res) => { const icons = res.customIcons || {}; delete icons[id]; DockAPI.storage.sync.set({ customIcons: icons }).then(() => refreshList()); }); };
+function saveIcon(id, url) { DockAPI.storage.sync.get(['customIcons']).then((res) => { const icons = res.customIcons || {}; icons[id] =
