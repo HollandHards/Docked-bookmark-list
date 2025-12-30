@@ -1,44 +1,67 @@
 {
   "manifest_version": 3,
-  "name": "Vertical Bookmark List",
-  "version": "1.0",
-  "description": "Automatically organizes and displays bookmarks from the Vertical-bookmark-list folder.",
-  "author": "Your Name",
-
+  "name": "Vertical Bookmark Dock",
+  "version": "1.7",
+  "description": "A customizable Mac-style dock for bookmarks.",
   "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
     "bookmarks",
-    "storage"
+    "contextMenus"
   ],
-
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "js": [
+        "adapter.js",
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icon.png",
+        "gears.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["adapter.js", "background.js"]
   },
-
   "browser_specific_settings": {
     "gecko": {
-      "id": "vertical-bookmarks@example.com",
+      "id": "vertical-dock@example.com",
       "strict_min_version": "109.0"
     }
   },
-
-  "action": {
-    "default_title": "Open Vertical Bookmarks",
-    "default_popup": "options.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+  "options_page": "options.html",
+  "commands": {
+    "toggle_dock": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Toggle the Dock"
     }
   },
-
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
   }
 }
