@@ -1,22 +1,29 @@
-// adapter.js
+// adapter.js - Full Content
+// Detect if we are in Firefox (browser namespace exists)
 const isFirefox = (typeof browser !== 'undefined');
+
+// In Service Workers, use 'self'. In pages, use 'this' or 'window'.
 const apiScope = (typeof self !== 'undefined') ? self : this;
 
 if (isFirefox) {
+  // Firefox: Native Promise support, just pass it through
   apiScope.DockAPI = browser;
 } 
 else {
-  // Chrome Adapter
+  // Chrome: Adapter to convert Callbacks to Promises
   apiScope.DockAPI = {
     runtime: {
       getURL: (path) => chrome.runtime.getURL(path),
       openOptionsPage: () => chrome.runtime.openOptionsPage(),
+      
+      // Error checking wrapper for sendMessage
       sendMessage: (msg) => new Promise(resolve => {
         chrome.runtime.sendMessage(msg, response => {
-          if (chrome.runtime.lastError) resolve(null);
-          else resolve(response);
+          if (chrome.runtime.lastError) { resolve(null); } 
+          else { resolve(response); }
         });
       }),
+
       onMessage: {
         addListener: (callback) => {
           chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -39,6 +46,7 @@ else {
       }),
       create: (props) => new Promise(r => chrome.tabs.create(props, r))
     },
+    // --- UPDATED STORAGE ADAPTER FOR LIVE UPDATES ---
     storage: {
       onChanged: {
         addListener: (cb) => chrome.storage.onChanged.addListener(cb)
@@ -52,8 +60,8 @@ else {
         set: (v) => new Promise(r => chrome.storage.local.set(v, r))
       }
     },
+    // --- UPDATED BOOKMARKS ADAPTER FOR LIVE UPDATES ---
     bookmarks: {
-      // Expose Events for Chrome
       onCreated: { addListener: (cb) => chrome.bookmarks.onCreated.addListener(cb) },
       onRemoved: { addListener: (cb) => chrome.bookmarks.onRemoved.addListener(cb) },
       onChanged: { addListener: (cb) => chrome.bookmarks.onChanged.addListener(cb) },
