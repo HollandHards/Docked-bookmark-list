@@ -1,80 +1,81 @@
-// adapter.js
-// Detect if we are in Firefox (browser namespace exists)
-const isFirefox = (typeof browser !== 'undefined');
+const isFirefox = typeof browser !== 'undefined';
+const DockAPI = isFirefox ? browser : {};
 
-// In Service Workers, use 'self'. In pages, use 'this' or 'window'.
-const apiScope = (typeof self !== 'undefined') ? self : this;
-
-if (isFirefox) {
-  // Firefox: Native Promise support, just pass it through
-  apiScope.DockAPI = browser;
-} 
-else {
-  // Chrome: Adapter to convert Callbacks to Promises
-  apiScope.DockAPI = {
-    runtime: {
-      getURL: (path) => chrome.runtime.getURL(path),
-      openOptionsPage: () => chrome.runtime.openOptionsPage(),
-      
-      // FIXED: Added error checking to suppress "Port closed" errors
-      sendMessage: (msg) => new Promise(resolve => {
-        chrome.runtime.sendMessage(msg, response => {
-          // If the background script didn't reply (port closed), Chrome sets lastError.
-          // We must check it to suppress the "Unchecked runtime.lastError" warning.
-          if (chrome.runtime.lastError) {
-            // resolve with null so the code continues without crashing
-            resolve(null); 
-          } else {
-            resolve(response);
-          }
-        });
-      }),
-
-      onMessage: {
-        addListener: (callback) => {
-          chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            const result = callback(request, sender);
-            // If the callback returns a Promise, keep the channel open
-            if (result && typeof result.then === 'function') {
-              result.then(sendResponse);
-              return true; 
-            }
-            // If not a promise, we don't return true, allowing the port to close naturally.
-          });
+// If we are in Chrome (or Edge/Brave), we need to wrap the API calls
+// to return Promises instead of using Callbacks.
+if (!isFirefox && typeof chrome !== 'undefined') {
+  
+  // Helper: Wraps a Chrome API function into a Promise
+  const promisify = (fn, context) => (...args) => {
+    return new Promise((resolve, reject) => {
+      fn.call(context, ...args, (result) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(result);
         }
-      }
-    },
-    tabs: {
-      query: (q) => new Promise(r => chrome.tabs.query(q, r)),
-      sendMessage: (id, msg) => new Promise(resolve => {
-        chrome.tabs.sendMessage(id, msg, response => {
-          if (chrome.runtime.lastError) resolve(null);
-          else resolve(response);
-        });
-      }),
-      create: (props) => new Promise(r => chrome.tabs.create(props, r))
-    },
-    storage: {
-      sync: {
-        get: (k) => new Promise(r => chrome.storage.sync.get(k, r)),
-        set: (v) => new Promise(r => chrome.storage.sync.set(v, r))
-      },
-      local: {
-        get: (k) => new Promise(r => chrome.storage.local.get(k, r)),
-        set: (v) => new Promise(r => chrome.storage.local.set(v, r))
-      }
-    },
-    bookmarks: {
-      getTree: () => new Promise(r => chrome.bookmarks.getTree(r)),
-      getChildren: (id) => new Promise(r => chrome.bookmarks.getChildren(id, r)),
-      create: (d) => new Promise(r => chrome.bookmarks.create(d, r)),
-      update: (id, d) => new Promise(r => chrome.bookmarks.update(id, d, r)),
-      remove: (id) => new Promise(r => chrome.bookmarks.remove(id, r)),
-      move: (id, dest) => new Promise(r => chrome.bookmarks.move(id, dest, r))
-    },
-    windows: {
-      create: (d) => new Promise(r => chrome.windows.create(d, r))
-    },
-    commands: chrome.commands
+      });
+    });
   };
+
+  // 1. Storage API
+  DockAPI.storage = {
+    sync: {
+      get: promisify(chrome.storage.sync.get, chrome.storage.sync),
+      set: promisify(chrome.storage.sync.set, chrome.storage.sync),
+      // Map other storage methods if needed, but we only use get/set
+    },
+    onChanged: chrome.storage.onChanged // Event listeners don't need wrapping
+  };
+
+  // 2. Bookmarks API
+  DockAPI.bookmarks = {
+    getTree: promisify(chrome.bookmarks.getTree, chrome.bookmarks),
+    getChildren: promisify(chrome.bookmarks.getChildren, chrome.bookmarks),
+    create: promisify(chrome.bookmarks.create, chrome.bookmarks),
+    update: promisify(chrome.bookmarks.update, chrome.bookmarks),
+    remove: promisify(chrome.bookmarks.remove, chrome.bookmarks),
+    removeTree: promisify(chrome.bookmarks.removeTree, chrome.bookmarks),
+    move: promisify(chrome.bookmarks.move, chrome.bookmarks)
+  };
+
+  // 3. Tabs & Windows API
+  DockAPI.tabs = {
+    create: promisify(chrome.tabs.create, chrome.tabs),
+    query: promisify(chrome.tabs.query, chrome.tabs),
+    sendMessage: promisify(chrome.tabs.sendMessage, chrome.tabs)
+  };
+
+  DockAPI.windows = {
+    create: promisify(chrome.windows.create, chrome.windows)
+  };
+
+  // 4. Commands API
+  DockAPI.commands = {
+    getAll: promisify(chrome.commands.getAll, chrome.commands),
+    onCommand: chrome.commands.onCommand
+  };
+
+  // 5. Runtime API
+  // We explicitly map the methods we use, and pass through the listeners
+  DockAPI.runtime = {
+    openOptionsPage: promisify(chrome.runtime.openOptionsPage, chrome.runtime),
+    sendMessage: promisify(chrome.runtime.sendMessage, chrome.runtime),
+    getURL: (path) => chrome.runtime.getURL(path),
+    onMessage: chrome.runtime.onMessage,
+    lastError: chrome.runtime.lastError
+  };
+  
+  // 6. Scripting (Optional, for future use)
+  if (chrome.scripting) {
+      DockAPI.scripting = {
+          executeScript: promisify(chrome.scripting.executeScript, chrome.scripting)
+      };
+  }
+
+}
+
+// Make it available globally in the script scope
+if (typeof window !== 'undefined') {
+  window.DockAPI = DockAPI;
 }
