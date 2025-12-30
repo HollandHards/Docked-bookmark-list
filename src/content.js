@@ -302,5 +302,30 @@ function toggleStack(bookmark, anchorElement) {
   document.body.appendChild(stack);
 }
 
+// --- LIVE SETTINGS LISTENER ---
+// Watches for changes in storage (Options page) and updates CSS instantly
+if (DockAPI.storage.onChanged) {
+    DockAPI.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'sync') {
+        const visualKeys = [
+          'dockPosition', 'dockSize', 'edgeTrigger', 'verticalPos', 
+          'handlerIcon', 'accentColor', 'showTooltips', 'separatorStyle', 
+          'enableShadow', 'enableGlow', 'enableAccent', 
+          'backdropBlur', 'iconShape', 'idleOpacity'
+        ];
+  
+        const needsStyleUpdate = visualKeys.some(key => changes[key]);
+  
+        if (needsStyleUpdate) {
+          refreshSettings();
+          if (changes.dockPosition) {
+             closeAllStacks();
+             closeContextMenu();
+          }
+        }
+      }
+    });
+}
+
 if (document.body) { initDock(); } 
 else { const observer = new MutationObserver((mutations, obs) => { if (document.body) { initDock(); obs.disconnect(); } }); observer.observe(document.documentElement, { childList: true, subtree: true }); }
