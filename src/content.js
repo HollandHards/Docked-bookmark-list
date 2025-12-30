@@ -317,3 +317,59 @@ function toggleStack(bookmark, anchorElement) {
 
 if (document.body) { initDock(); } 
 else { const observer = new MutationObserver((mutations, obs) => { if (document.body) { initDock(); obs.disconnect(); } }); observer.observe(document.documentElement, { childList: true, subtree: true }); }
+
+// --- KEYBOARD NAVIGATION ---
+let selectedIndex = -1;
+
+document.addEventListener('keydown', (e) => {
+  // Only handle keys if dock is visible
+  if (!isDockVisible) return;
+
+  const items = Array.from(dockContainer.querySelectorAll('.dock-item'));
+  if (items.length === 0) return;
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    selectedIndex = (selectedIndex + 1) % items.length;
+    highlightItem(items[selectedIndex]);
+  } 
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+    highlightItem(items[selectedIndex]);
+  } 
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (selectedIndex > -1 && items[selectedIndex]) {
+      items[selectedIndex].click(); // Simulate click
+      toggleDock(false);
+    }
+  }
+  else if (e.key === 'Escape') {
+    toggleDock(false);
+  }
+});
+
+function highlightItem(item) {
+  // Remove old highlights
+  dockContainer.querySelectorAll('.dock-item').forEach(i => {
+    i.style.transform = 'scale(1)';
+    i.style.filter = 'none';
+    i.style.zIndex = '1';
+  });
+
+  // Apply highlight to new item (Simulate Hover)
+  item.style.transform = 'scale(1.5)';
+  item.style.zIndex = '100';
+  
+  // Optional: Add a visual border or glow
+  const img = item.querySelector('img');
+  if(img) img.style.filter = `drop-shadow(0 0 10px ${settings.accentColor})`;
+}
+
+// Reset selection when dock closes
+const originalToggleDock = toggleDock;
+toggleDock = function(show) {
+    originalToggleDock(show);
+    if (!show) selectedIndex = -1;
+};
