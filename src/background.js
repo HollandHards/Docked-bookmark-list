@@ -27,7 +27,7 @@ async function getOrCreateDockFolder() {
       title: DOCK_FOLDER_NAME
     });
     
-    // UPDATED: Default bookmark now points to your GitHub Repo
+    // Default bookmark
     await DockAPI.bookmarks.create({
       parentId: dockFolder.id,
       title: "Welcome! Right-click to add pages",
@@ -143,11 +143,11 @@ function findFolder(nodes, name) {
 
 function broadcastRefresh() {
   getDockBookmarks().then(bookmarks => {
-    DockAPI.tabs.query({active: true, currentWindow: true}).then(tabs => {
-      if (tabs[0]?.id) {
-        DockAPI.tabs.sendMessage(tabs[0].id, { action: "refresh_dock", data: bookmarks })
-          .catch(() => {}); 
-      }
+    DockAPI.tabs.query({}).then(tabs => {
+      tabs.forEach(tab => {
+          DockAPI.tabs.sendMessage(tab.id, { action: "refresh_dock", data: bookmarks })
+            .catch(() => {}); // Ignore errors from tabs without the content script
+      });
     });
   });
 }
@@ -185,7 +185,7 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
                 title: tab.title,
                 url: tab.url
             });
-            broadcastRefresh();
+            // broadcastRefresh() is now handled by the event listeners below
         }
     });
   }
@@ -195,10 +195,10 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "open_incognito") { DockAPI.windows.create({ url: request.url, incognito: true }); }
   
   if (request.action === "rename_bookmark") {
-    DockAPI.bookmarks.update(request.id, { title: request.title }).then(() => broadcastRefresh());
+    DockAPI.bookmarks.update(request.id, { title: request.title });
   }
   if (request.action === "delete_bookmark") {
-    DockAPI.bookmarks.remove(request.id).then(() => broadcastRefresh());
+    DockAPI.bookmarks.remove(request.id);
   }
   if (request.action === "update_icon") {
     DockAPI.storage.sync.get(['customIcons']).then((result) => {
@@ -211,3 +211,27 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
   
   return false; 
 });
+
+
+// --- LIVE UPDATE LISTENERS ---
+
+// 1. Watch for Bookmark Changes
+// When you drag a bookmark in Options, or add one in the browser, the Dock updates instantly.
+const handleBookmarkChange = () => broadcastRefresh();
+
+if (DockAPI.bookmarks.onCreated) DockAPI.bookmarks.onCreated.addListener(handleBookmarkChange);
+if (DockAPI.bookmarks.onRemoved) DockAPI.bookmarks.onRemoved.addListener(handleBookmarkChange);
+if (DockAPI.bookmarks.onChanged) DockAPI.bookmarks.onChanged.addListener(handleBookmarkChange);
+if (DockAPI.bookmarks.onMoved)   DockAPI.bookmarks.onMoved.addListener(handleBookmarkChange);
+
+// 2. Watch for settings that change the LIST (not just CSS)
+// e.g., Toggling the "Settings" gear icon requires re-rendering the list.
+if (DockAPI.storage.onChanged) {
+    DockAPI.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'sync') {
+        if (changes.showSettings || changes.customIcons || changes.settingsIcon) {
+          broadcastRefresh();
+        }
+      }
+    });
+}
