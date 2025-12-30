@@ -1,3 +1,5 @@
+⚠️ I have little to none programming skills - this extension is 100% coded by AI (gemini) 
+
 # Vertical Bookmark Dock 🍎
 
 ![Version](https://img.shields.io/badge/version-1.7-blue.svg)
