@@ -9,76 +9,36 @@
 }
 
 /* --- UNIVERSAL FONT FIX --- */
-#my-mac-dock, 
-.dock-context-menu, 
-.dock-stack,
-.dock-handler {
+#my-mac-dock, .dock-context-menu, .dock-stack, .dock-handler {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 
 /* --- DOCK CONTAINER --- */
 #my-mac-dock {
-  position: fixed;
-  padding: 10px;
-  background: transparent;
-  z-index: 2147483647 !important;
-  display: flex;
-  gap: 8px; 
+  position: fixed; padding: 10px; background: transparent; z-index: 2147483647 !important;
+  display: flex; gap: 8px; 
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
-  pointer-events: auto; 
-  opacity: 1; /* Default opacity when visible */
+  pointer-events: auto; opacity: 1; 
 }
-
 /* APPLY IDLE OPACITY */
-#my-mac-dock.dock-idle {
-  opacity: var(--idle-opacity);
-}
-
+#my-mac-dock.dock-idle { opacity: var(--idle-opacity); }
 #my-mac-dock::-webkit-scrollbar { display: none; }
 
-/* 1. LEFT SIDE (Vertical) */
-#my-mac-dock.left-side {
-  top: var(--dock-offset); left: 0; right: auto; bottom: auto;
-  flex-direction: column; align-items: flex-start;
-  transform: translateY(-50%) translateX(-100%);
-}
+/* POSITIONS */
+#my-mac-dock.left-side { top: var(--dock-offset); left: 0; flex-direction: column; align-items: flex-start; transform: translateY(-50%) translateX(-100%); }
 #my-mac-dock.left-side.dock-visible { transform: translateY(-50%) translateX(0); }
-
-/* 2. RIGHT SIDE (Vertical) */
-#my-mac-dock.right-side {
-  top: var(--dock-offset); right: 0; left: auto; bottom: auto;
-  flex-direction: column; align-items: flex-end;
-  transform: translateY(-50%) translateX(100%);
-}
+#my-mac-dock.right-side { top: var(--dock-offset); right: 0; flex-direction: column; align-items: flex-end; transform: translateY(-50%) translateX(100%); }
 #my-mac-dock.right-side.dock-visible { transform: translateY(-50%) translateX(0); }
-
-/* 3. BOTTOM (Horizontal) */
-#my-mac-dock.bottom-side {
-  left: var(--dock-offset); bottom: 0; top: auto; right: auto;
-  flex-direction: row; align-items: flex-end;
-  transform: translateX(-50%) translateY(100%);
-}
+#my-mac-dock.bottom-side { left: var(--dock-offset); bottom: 0; flex-direction: row; align-items: flex-end; transform: translateX(-50%) translateY(100%); }
 #my-mac-dock.bottom-side.dock-visible { transform: translateX(-50%) translateY(0); }
-
-/* 4. TOP (Horizontal) */
-#my-mac-dock.top-side {
-  left: var(--dock-offset); top: 0; bottom: auto; right: auto;
-  flex-direction: row; align-items: flex-start;
-  transform: translateX(-50%) translateY(-100%);
-}
+#my-mac-dock.top-side { left: var(--dock-offset); top: 0; flex-direction: row; align-items: flex-start; transform: translateX(-50%) translateY(-100%); }
 #my-mac-dock.top-side.dock-visible { transform: translateX(-50%) translateY(0); }
 
-
-/* --- HANDLER (The Trigger Bar) --- */
+/* --- HANDLER --- */
 .dock-handler {
-  position: absolute; 
-  background: rgba(100, 100, 100, 0.4);
-  backdrop-filter: blur(4px); cursor: pointer; z-index: 2147483648; 
-  transition: all 0.2s ease;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
-  background-position: center; background-repeat: no-repeat;
+  position: absolute; background: rgba(100, 100, 100, 0.4); backdrop-filter: blur(4px); cursor: pointer; z-index: 2147483648; 
+  transition: all 0.2s ease; box-shadow: 0 0 5px rgba(255, 255, 255, 0.1); background-position: center; background-repeat: no-repeat;
 }
 #my-mac-dock.left-side .dock-handler, #my-mac-dock.right-side .dock-handler { width: 14px; height: 60px; top: 50%; transform: translateY(-50%); }
 #my-mac-dock.left-side .dock-handler { right: -24px; border-radius: 0 10px 10px 0; }
@@ -87,55 +47,25 @@
 #my-mac-dock.bottom-side .dock-handler { top: -24px; border-radius: 10px 10px 0 0; }
 #my-mac-dock.top-side .dock-handler { bottom: -24px; border-radius: 0 0 10px 10px; }
 
-.dock-handler.has-icon {
-  width: 40px !important; height: 40px !important;
-  background-color: rgba(255, 255, 255, 0.15) !important; 
-  backdrop-filter: blur(2px);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  border-radius: 8px; background-size: 70%; border: 1px solid rgba(255, 255, 255, 0.2);
-}
-#my-mac-dock.left-side .dock-handler.has-icon { right: -40px; }
-#my-mac-dock.right-side .dock-handler.has-icon { left: -40px; }
-#my-mac-dock.bottom-side .dock-handler.has-icon { top: -40px; }
-#my-mac-dock.top-side .dock-handler.has-icon { bottom: -40px; }
+.dock-handler.has-icon { width: 40px !important; height: 40px !important; background-color: rgba(255, 255, 255, 0.15) !important; backdrop-filter: blur(2px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); border-radius: 8px; background-size: 70%; border: 1px solid rgba(255, 255, 255, 0.2); }
 #my-mac-dock.dock-visible .dock-handler { opacity: 0; pointer-events: none; }
-
 
 /* --- ITEMS --- */
 .dock-item {
-  width: var(--dock-icon-size);
-  height: var(--dock-icon-size);
-  border-radius: var(--icon-radius); /* CHANGED: Uses Variable */
-  background: transparent;
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-  z-index: 1; user-select: none; cursor: pointer;
-  will-change: width, height; 
-  transition: margin 0.1s; 
-  font-family: inherit;
+  width: var(--dock-icon-size); height: var(--dock-icon-size);
+  border-radius: var(--icon-radius); /* USES VARIABLE */
+  background: transparent; display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1; user-select: none; cursor: pointer;
+  will-change: width, height; transition: margin 0.1s; font-family: inherit;
 }
-#my-mac-dock.dock-idle .dock-item {
-  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), margin 0.1s;
-}
-
-/* --- IMAGE --- */
-.dock-item img {
-  width: 100%; height: 100%; object-fit: contain;
-  border-radius: 10px; pointer-events: none; 
-  transition: filter 0.2s ease; position: relative; z-index: 2; 
-}
+#my-mac-dock.dock-idle .dock-item { transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), margin 0.1s; }
+.dock-item img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; pointer-events: none; transition: filter 0.2s ease; position: relative; z-index: 2; }
 #my-mac-dock.shadow-enabled .dock-item img { filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); }
 
-/* --- COLOR OVERLAY --- */
 #my-mac-dock.theme-enabled .dock-item::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--accent-color);
-  -webkit-mask-image: var(--bg-image); mask-image: var(--bg-image);
-  -webkit-mask-size: contain; mask-size: contain;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  -webkit-mask-position: center; mask-position: center;
-  mix-blend-mode: color; opacity: 0.5; z-index: 3;
-  pointer-events: none; transition: opacity 0.2s ease;
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--accent-color);
+  -webkit-mask-image: var(--bg-image); mask-image: var(--bg-image); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center;
+  mix-blend-mode: color; opacity: 0.5; z-index: 3; pointer-events: none; transition: opacity 0.2s ease;
 }
 #my-mac-dock.theme-enabled .dock-item:hover::before { opacity: 0.8; }
 #my-mac-dock.glow-enabled .dock-item:hover img { filter: drop-shadow(0 0 8px var(--accent-color)); }
@@ -143,9 +73,7 @@
 
 /* --- TOOLTIPS --- */
 #my-mac-dock.tooltips-enabled .dock-item:hover::after {
-  content: attr(title); position: absolute; 
-  background: rgba(0,0,0,0.8); color: #fff; padding: 4px 8px; border-radius: 4px;
-  font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 1; z-index: 100; font-family: inherit;
+  content: attr(title); position: absolute; background: rgba(0,0,0,0.8); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 1; z-index: 100; font-family: inherit;
 }
 #my-mac-dock.left-side.tooltips-enabled .dock-item:hover::after { left: 110%; top: 50%; transform: translateY(-50%); border-left: 3px solid #fff; }
 #my-mac-dock.left-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-left: 3px solid var(--accent-color); }
@@ -156,62 +84,37 @@
 #my-mac-dock.top-side.tooltips-enabled .dock-item:hover::after { top: 110%; left: 50%; transform: translateX(-50%); border-top: 3px solid #fff; }
 #my-mac-dock.top-side.theme-enabled.tooltips-enabled .dock-item:hover::after { border-top: 3px solid var(--accent-color); }
 
-/* --- CONTEXT MENU --- */
-.dock-context-menu {
-  position: fixed; z-index: 2147483649;
-  background: rgba(40, 40, 40, 0.95); backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4); width: 180px; display: flex; flex-direction: column;
-}
+/* --- CONTEXT MENU & STACKS --- */
+.dock-context-menu { position: fixed; z-index: 2147483649; background: rgba(40, 40, 40, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); width: 180px; display: flex; flex-direction: column; }
 .ctx-item { padding: 8px 12px; color: white; font-size: 13px; cursor: pointer; border-radius: 4px; transition: background 0.1s; text-decoration: none; display: block; }
 .ctx-item:hover { background: rgba(255,255,255,0.1); color: #fff; background: var(--accent-color); } 
 .ctx-sep { height: 1px; background: rgba(255,255,255,0.2); margin: 4px 0; }
 
-/* --- STACKS --- */
-.dock-stack {
-  position: fixed; z-index: 2147483648;
-  background: rgba(40, 40, 40, 0.85); backdrop-filter: blur(10px);
-  border-radius: 12px; padding: 10px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  gap: 10px; width: 240px; max-height: 300px; overflow-y: auto;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
-  animation: stackPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
+.dock-stack { position: fixed; z-index: 2147483648; background: rgba(40, 40, 40, 0.85); backdrop-filter: blur(10px); border-radius: 12px; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; width: 240px; max-height: 300px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); animation: stackPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 @keyframes stackPop { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
-.dock-stack::-webkit-scrollbar { width: 4px; }
-.dock-stack::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+.dock-stack::-webkit-scrollbar { width: 4px; } .dock-stack::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
 .stack-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-decoration: none; color: white; text-align: center; padding: 5px; border-radius: 8px; transition: background 0.1s; }
 .stack-item:hover { background: rgba(255,255,255,0.1); outline: 1px solid var(--accent-color); }
 .stack-item img { width: 40px; height: 40px; margin-bottom: 5px; object-fit: contain; }
 .stack-item span { font-size: 11px; line-height: 1.2; word-break: break-word; max-width: 100%; }
 
-/* --- SEPARATORS --- */
 .dock-spacer { background: rgba(0,0,0,0.3); margin: 5px 0; }
 #my-mac-dock.left-side .dock-spacer, #my-mac-dock.right-side .dock-spacer { width: 100%; height: 2px; }
 #my-mac-dock.top-side .dock-spacer, #my-mac-dock.bottom-side .dock-spacer { height: 100%; width: 2px; margin: 0 5px; }
-.dock-section-header {
-  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
-  text-align: center; pointer-events: none; border-radius: 4px;
-  color: #ddd; background: rgba(0, 0, 0, 0.3); border: 2px solid #555;
-  padding: 4px 0; margin: 8px 0; width: 100%; font-family: inherit;
-}
+.dock-section-header { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; text-align: center; pointer-events: none; border-radius: 4px; color: #ddd; background: rgba(0, 0, 0, 0.3); border: 2px solid #555; padding: 4px 0; margin: 8px 0; width: 100%; font-family: inherit; }
 #my-mac-dock.top-side .dock-section-header, #my-mac-dock.bottom-side .dock-section-header { width: auto; padding: 4px 8px; margin: 0 8px; writing-mode: vertical-rl; text-orientation: mixed; }
 
-/* --- STYLE CLASSES (Updated for Blur) --- */
+/* --- STYLE CLASSES --- */
 #my-mac-dock.theme-enabled .style-glass { 
-    color: #fff; 
-    text-shadow: 0 1px 4px rgba(0,0,0,0.9); 
-    background: rgba(255, 255, 255, 0.15); /* Slightly lighter */
-    backdrop-filter: blur(var(--dock-blur)) saturate(180%); /* THE MAGIC */
-    -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
-    border-color: var(--accent-color); 
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9); 
+    background: rgba(255, 255, 255, 0.15); 
+    backdrop-filter: blur(var(--dock-blur)) saturate(180%); -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    border-color: var(--accent-color); border: 1px solid rgba(255, 255, 255, 0.2);
 }
 #my-mac-dock.theme-enabled .style-neon { color: #fff; text-shadow: 0 0 5px var(--accent-color); background: rgba(0,0,0,0.6); border: 1px solid var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
 #my-mac-dock.theme-enabled .style-minimal { color: rgba(255,255,255,0.8); background: transparent; border: none; border-left: 2px solid rgba(255,255,255,0.3); }
 #my-mac-dock.theme-enabled .style-classic { color: #000; background: #fff; border: 2px solid #000; }
 
-/* Folders & Settings Icon - No Changes Needed */
 #my-mac-dock.theme-enabled .dock-item.is-folder img { content: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"); background-color: var(--accent-color); -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); -webkit-mask-size: cover; mask-size: cover; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; width: 100%; height: 100%; transform: scale(1.1); }
 #my-mac-dock:not(.theme-enabled) .dock-item.is-folder img { content: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"); background-color: #44ccff; -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); -webkit-mask-size: cover; mask-size: cover; transform: scale(1.1); }
 .dock-item.is-folder::before { display: none; }
