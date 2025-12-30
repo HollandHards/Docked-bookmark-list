@@ -17,7 +17,7 @@
   "action": {
     "default_title": "Open Vertical Bookmarks",
     "default_popup": "options.html",
-   },
+   }
 
   "options_ui": {
     "page": "options.html",
