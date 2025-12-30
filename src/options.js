@@ -16,6 +16,12 @@ const handlerIconInput = document.getElementById('handlerIcon');
 const currentShortcut = document.getElementById('currentShortcut'); 
 const settingsIconInput = document.getElementById('settingsIcon');
 const accentColorInput = document.getElementById('accentColor');
+
+// NEW ELEMENTS
+const blurSlider = document.getElementById('backdropBlur');
+const shapeSelect = document.getElementById('iconShape');
+const opacitySlider = document.getElementById('idleOpacity');
+
 const itemTypeSelect = document.getElementById('itemType');
 const newTitleInput = document.getElementById('newTitle');
 const newUrlInput = document.getElementById('newUrl');
@@ -30,7 +36,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     'dockPosition', 'dockSize', 'customIcons', 'edgeTrigger', 
     'showTooltips', 'showSettings', 'verticalPos', 'handlerIcon', 
     'settingsIcon', 'accentColor', 'separatorStyle', 'enableShadow', 
-    'enableGlow', 'enableAccent'
+    'enableGlow', 'enableAccent', 
+    // NEW KEYS
+    'backdropBlur', 'iconShape', 'idleOpacity'
   ]);
   
   if(posSelect) posSelect.value = storage.dockPosition || 'left';
@@ -42,16 +50,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if(shadowCheck) shadowCheck.checked = (storage.enableShadow !== false);
   if(glowCheck) glowCheck.checked = (storage.enableGlow !== false);
 
+  // NEW VISUALS
+  if(blurSlider) blurSlider.value = (storage.backdropBlur !== undefined) ? storage.backdropBlur : 10;
+  if(shapeSelect) shapeSelect.value = storage.iconShape || '12px';
+  if(opacitySlider) opacitySlider.value = (storage.idleOpacity !== undefined) ? storage.idleOpacity : 100;
+
   const isAccentEnabled = (storage.enableAccent !== false);
   if(accentCheck) accentCheck.checked = isAccentEnabled;
   toggleColorInput(isAccentEnabled);
 
   if(vPosSlider) { vPosSlider.value = storage.verticalPos || 50; if(vPosValue) vPosValue.textContent = vPosSlider.value + '%'; }
   
-  // FIX: Ensure text inputs are populated
   if(handlerIconInput) handlerIconInput.value = storage.handlerIcon || ''; 
   if(settingsIconInput) settingsIconInput.value = storage.settingsIcon || '';
-
   if(accentColorInput) accentColorInput.value = storage.accentColor || '#007aff';
   document.body.style.setProperty('--accent-color', accentColorInput.value);
 
@@ -60,7 +71,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function toggleColorInput(enabled) { if (colorContainer) { colorContainer.style.opacity = enabled ? '1' : '0.5'; colorContainer.style.pointerEvents = enabled ? 'auto' : 'none'; } }
 
-// --- ADD NEW ITEM ---
+// --- SETTINGS LISTENERS ---
+if(posSelect) posSelect.addEventListener('change', () => DockAPI.storage.sync.set({ dockPosition: posSelect.value }));
+if(sizeSlider) sizeSlider.addEventListener('input', (e) => { sizeValue.textContent = e.target.value + 'px'; DockAPI.storage.sync.set({ dockSize: e.target.value }); });
+if(edgeCheck) edgeCheck.addEventListener('change', () => DockAPI.storage.sync.set({ edgeTrigger: edgeCheck.checked }));
+if(tooltipCheck) tooltipCheck.addEventListener('change', () => DockAPI.storage.sync.set({ showTooltips: tooltipCheck.checked }));
+if(settingsCheck) settingsCheck.addEventListener('change', () => DockAPI.storage.sync.set({ showSettings: settingsCheck.checked }));
+if(separatorSelect) separatorSelect.addEventListener('change', () => DockAPI.storage.sync.set({ separatorStyle: separatorSelect.value }));
+if(shadowCheck) shadowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableShadow: shadowCheck.checked }));
+if(glowCheck) glowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableGlow: glowCheck.checked }));
+if(accentCheck) accentCheck.addEventListener('change', () => { DockAPI.storage.sync.set({ enableAccent: accentCheck.checked }); toggleColorInput(accentCheck.checked); });
+if(vPosSlider) vPosSlider.addEventListener('input', (e) => { vPosValue.textContent = e.target.value + '%'; DockAPI.storage.sync.set({ verticalPos: e.target.value }); });
+
+// NEW LISTENERS
+if(blurSlider) blurSlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ backdropBlur: e.target.value }));
+if(shapeSelect) shapeSelect.addEventListener('change', (e) => DockAPI.storage.sync.set({ iconShape: e.target.value }));
+if(opacitySlider) opacitySlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ idleOpacity: e.target.value }));
+
+if(handlerIconInput) handlerIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ handlerIcon: e.target.value }); });
+if(settingsIconInput) settingsIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ settingsIcon: e.target.value }); });
+if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ accentColor: e.target.value }); document.body.style.setProperty('--accent-color', e.target.value); });
+
+// --- REMAINDER OF FILE IS IDENTICAL TO BEFORE (Drag Drop, Add, Edit, Delete) ---
+// (Copy the Add Item, Delete Bookmark, and Render List functions from the previous working version here)
+// For brevity, I am assuming you kept the logic from the previous step. 
+// If you need the FULL file again with these merged, just ask!
+
 if (itemTypeSelect) {
   itemTypeSelect.addEventListener('change', () => {
     const type = itemTypeSelect.value;
@@ -108,7 +144,6 @@ if (addBtn) {
   });
 }
 
-// --- BOOKMARK ACTIONS ---
 async function deleteBookmark(id) {
   if (confirm("Delete this item?")) {
     try { await DockAPI.bookmarks.remove(id); } catch (e) { await DockAPI.bookmarks.removeTree(id); }
@@ -133,7 +168,6 @@ async function refreshList() {
   renderList(bookmarks, storage.customIcons || {});
 }
 
-// --- SETTINGS LISTENERS ---
 function updateShortcutDisplay() {
   DockAPI.commands.getAll().then((commands) => {
     const command = commands.find(c => c.name === 'toggle_dock');
@@ -142,27 +176,9 @@ function updateShortcutDisplay() {
   });
 }
 
-if(posSelect) posSelect.addEventListener('change', () => DockAPI.storage.sync.set({ dockPosition: posSelect.value }));
-if(sizeSlider) sizeSlider.addEventListener('input', (e) => { sizeValue.textContent = e.target.value + 'px'; DockAPI.storage.sync.set({ dockSize: e.target.value }); });
-if(edgeCheck) edgeCheck.addEventListener('change', () => DockAPI.storage.sync.set({ edgeTrigger: edgeCheck.checked }));
-if(tooltipCheck) tooltipCheck.addEventListener('change', () => DockAPI.storage.sync.set({ showTooltips: tooltipCheck.checked }));
-if(settingsCheck) settingsCheck.addEventListener('change', () => DockAPI.storage.sync.set({ showSettings: settingsCheck.checked }));
-if(separatorSelect) separatorSelect.addEventListener('change', () => DockAPI.storage.sync.set({ separatorStyle: separatorSelect.value }));
-if(shadowCheck) shadowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableShadow: shadowCheck.checked }));
-if(glowCheck) glowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableGlow: glowCheck.checked }));
-if(accentCheck) accentCheck.addEventListener('change', () => { DockAPI.storage.sync.set({ enableAccent: accentCheck.checked }); toggleColorInput(accentCheck.checked); });
-if(vPosSlider) vPosSlider.addEventListener('input', (e) => { vPosValue.textContent = e.target.value + '%'; DockAPI.storage.sync.set({ verticalPos: e.target.value }); });
-
-// Save Input fields on every keystroke
-if(handlerIconInput) handlerIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ handlerIcon: e.target.value }); });
-if(settingsIconInput) settingsIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ settingsIcon: e.target.value }); });
-
-if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ accentColor: e.target.value }); document.body.style.setProperty('--accent-color', e.target.value); });
 if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
-
 window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
-// --- RENDER LIST & DRAG-DROP ---
 async function getDockBookmarks() {
   const tree = await DockAPI.bookmarks.getTree();
   let dockFolder = findFolder(tree, DOCK_FOLDER_NAME);
