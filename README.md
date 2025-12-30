@@ -1,16 +1,10 @@
-Here is a comprehensive, professional `README.md` for your GitHub repository. It documents all the features, the technical architecture (Monorepo/Adapter pattern), and instructions for installation and development.
-
-You can create a file named `README.md` in the root of your project and paste this content in.
-
----
-
 # Vertical Bookmark Dock 🍎
 
 **Transform your browser bookmarks into a sleek, animated, Mac-style dock.**
 
 Vertical Bookmark Dock replaces the static, cluttered bookmarks bar with a modern sidebar that auto-hides when not in use. It features smooth "Fisheye" magnification, folder stacks, and deep customization options.
 
-*(Add a screenshot of your dock here: `![Alt text](path/to/screenshot.png)`)*
+*(Add a screenshot of your dock here: `![Alt text](readme/vertical-dock-bar-animation.gif)`)*
 
 ---
 
