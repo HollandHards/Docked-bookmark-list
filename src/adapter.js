@@ -8,6 +8,7 @@ if (!isFirefox && typeof chrome !== 'undefined') {
   // Helper: Wraps a Chrome API function into a Promise
   const promisify = (fn, context) => (...args) => {
     return new Promise((resolve, reject) => {
+      // Chrome APIs expect the callback as the last argument
       fn.call(context, ...args, (result) => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
@@ -23,9 +24,8 @@ if (!isFirefox && typeof chrome !== 'undefined') {
     sync: {
       get: promisify(chrome.storage.sync.get, chrome.storage.sync),
       set: promisify(chrome.storage.sync.set, chrome.storage.sync),
-      // Map other storage methods if needed, but we only use get/set
     },
-    onChanged: chrome.storage.onChanged // Event listeners don't need wrapping
+    onChanged: chrome.storage.onChanged
   };
 
   // 2. Bookmarks API
@@ -57,7 +57,6 @@ if (!isFirefox && typeof chrome !== 'undefined') {
   };
 
   // 5. Runtime API
-  // We explicitly map the methods we use, and pass through the listeners
   DockAPI.runtime = {
     openOptionsPage: promisify(chrome.runtime.openOptionsPage, chrome.runtime),
     sendMessage: promisify(chrome.runtime.sendMessage, chrome.runtime),
@@ -66,16 +65,15 @@ if (!isFirefox && typeof chrome !== 'undefined') {
     lastError: chrome.runtime.lastError
   };
   
-  // 6. Scripting (Optional, for future use)
+  // 6. Scripting (Optional)
   if (chrome.scripting) {
       DockAPI.scripting = {
           executeScript: promisify(chrome.scripting.executeScript, chrome.scripting)
       };
   }
-
 }
 
-// Make it available globally in the script scope
+// Make it available globally
 if (typeof window !== 'undefined') {
   window.DockAPI = DockAPI;
 }
