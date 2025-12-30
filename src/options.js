@@ -17,7 +17,6 @@ const currentShortcut = document.getElementById('currentShortcut');
 const settingsIconInput = document.getElementById('settingsIcon');
 const accentColorInput = document.getElementById('accentColor');
 
-// NEW ELEMENTS
 const blurSlider = document.getElementById('backdropBlur');
 const shapeSelect = document.getElementById('iconShape');
 const opacitySlider = document.getElementById('idleOpacity');
@@ -30,14 +29,12 @@ const addBtn = document.getElementById('addBtn');
 const DOCK_FOLDER_NAME = "Vertical-bookmark-list";
 let dragSrcId = null;
 
-// --- INITIAL LOAD ---
 document.addEventListener('DOMContentLoaded', async () => {
   const storage = await DockAPI.storage.sync.get([
     'dockPosition', 'dockSize', 'customIcons', 'edgeTrigger', 
     'showTooltips', 'showSettings', 'verticalPos', 'handlerIcon', 
     'settingsIcon', 'accentColor', 'separatorStyle', 'enableShadow', 
-    'enableGlow', 'enableAccent', 
-    'backdropBlur', 'iconShape', 'idleOpacity'
+    'enableGlow', 'enableAccent', 'backdropBlur', 'iconShape', 'idleOpacity'
   ]);
   
   if(posSelect) posSelect.value = storage.dockPosition || 'left';
@@ -69,7 +66,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function toggleColorInput(enabled) { if (colorContainer) { colorContainer.style.opacity = enabled ? '1' : '0.5'; colorContainer.style.pointerEvents = enabled ? 'auto' : 'none'; } }
 
-// --- SETTINGS LISTENERS ---
 if(posSelect) posSelect.addEventListener('change', () => DockAPI.storage.sync.set({ dockPosition: posSelect.value }));
 if(sizeSlider) sizeSlider.addEventListener('input', (e) => { sizeValue.textContent = e.target.value + 'px'; DockAPI.storage.sync.set({ dockSize: e.target.value }); });
 if(edgeCheck) edgeCheck.addEventListener('change', () => DockAPI.storage.sync.set({ edgeTrigger: edgeCheck.checked }));
@@ -81,7 +77,6 @@ if(glowCheck) glowCheck.addEventListener('change', () => DockAPI.storage.sync.se
 if(accentCheck) accentCheck.addEventListener('change', () => { DockAPI.storage.sync.set({ enableAccent: accentCheck.checked }); toggleColorInput(accentCheck.checked); });
 if(vPosSlider) vPosSlider.addEventListener('input', (e) => { vPosValue.textContent = e.target.value + '%'; DockAPI.storage.sync.set({ verticalPos: e.target.value }); });
 
-// NEW LISTENERS
 if(blurSlider) blurSlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ backdropBlur: e.target.value }));
 if(shapeSelect) shapeSelect.addEventListener('change', (e) => DockAPI.storage.sync.set({ iconShape: e.target.value }));
 if(opacitySlider) opacitySlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ idleOpacity: e.target.value }));
@@ -93,7 +88,6 @@ if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI
 if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
 window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
-// --- REMAINDER: Add/Edit/Delete Logic ---
 if (itemTypeSelect) {
   itemTypeSelect.addEventListener('change', () => {
     const type = itemTypeSelect.value;
@@ -163,14 +157,6 @@ async function refreshList() {
   const bookmarks = await getDockBookmarks();
   const storage = await DockAPI.storage.sync.get(['customIcons']);
   renderList(bookmarks, storage.customIcons || {});
-}
-
-function updateShortcutDisplay() {
-  DockAPI.commands.getAll().then((commands) => {
-    const command = commands.find(c => c.name === 'toggle_dock');
-    if (command && command.shortcut) { if(currentShortcut) currentShortcut.textContent = command.shortcut; } 
-    else { if(currentShortcut) currentShortcut.textContent = 'Not Set'; }
-  });
 }
 
 async function getDockBookmarks() {
