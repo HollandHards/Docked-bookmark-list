@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     'showTooltips', 'showSettings', 'verticalPos', 'handlerIcon', 
     'settingsIcon', 'accentColor', 'separatorStyle', 'enableShadow', 
     'enableGlow', 'enableAccent', 
-    // NEW KEYS
     'backdropBlur', 'iconShape', 'idleOpacity'
   ]);
   
@@ -50,7 +49,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if(shadowCheck) shadowCheck.checked = (storage.enableShadow !== false);
   if(glowCheck) glowCheck.checked = (storage.enableGlow !== false);
 
-  // NEW VISUALS
   if(blurSlider) blurSlider.value = (storage.backdropBlur !== undefined) ? storage.backdropBlur : 10;
   if(shapeSelect) shapeSelect.value = storage.iconShape || '12px';
   if(opacitySlider) opacitySlider.value = (storage.idleOpacity !== undefined) ? storage.idleOpacity : 100;
@@ -92,11 +90,10 @@ if(handlerIconInput) handlerIconInput.addEventListener('input', (e) => { DockAPI
 if(settingsIconInput) settingsIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ settingsIcon: e.target.value }); });
 if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ accentColor: e.target.value }); document.body.style.setProperty('--accent-color', e.target.value); });
 
-// --- REMAINDER OF FILE IS IDENTICAL TO BEFORE (Drag Drop, Add, Edit, Delete) ---
-// (Copy the Add Item, Delete Bookmark, and Render List functions from the previous working version here)
-// For brevity, I am assuming you kept the logic from the previous step. 
-// If you need the FULL file again with these merged, just ask!
+if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
+window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
+// --- REMAINDER: Add/Edit/Delete Logic ---
 if (itemTypeSelect) {
   itemTypeSelect.addEventListener('change', () => {
     const type = itemTypeSelect.value;
@@ -175,9 +172,6 @@ function updateShortcutDisplay() {
     else { if(currentShortcut) currentShortcut.textContent = 'Not Set'; }
   });
 }
-
-if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
-window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
 async function getDockBookmarks() {
   const tree = await DockAPI.bookmarks.getTree();
