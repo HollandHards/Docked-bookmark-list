@@ -1,46 +1,44 @@
 {
   "manifest_version": 3,
-  "name": "Vertical Bookmark Dock",
-  "version": "1.9",
-  "description": "A Mac-style animated dock for your bookmarks.",
+  "name": "Vertical Bookmark List",
+  "version": "1.0",
+  "description": "Automatically organizes and displays bookmarks from the Vertical-bookmark-list folder.",
+  "author": "Your Name",
+
   "permissions": [
     "bookmarks",
-    "storage",
-    "activeTab",
-    "scripting",
-    "contextMenus"
+    "storage"
   ],
+
   "background": {
-    "scripts": ["adapter.js", "background.js"]
+    "scripts": ["background.js"]
   },
+
   "browser_specific_settings": {
     "gecko": {
-      "id": "vertical-dock@example.com",
+      "id": "vertical-bookmarks@example.com",
       "strict_min_version": "109.0"
     }
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "css": ["styles.css"],
-      "js": ["adapter.js", "content.js"],
-      "run_at": "document_end"
-    }
-  ],
-  "options_page": "options.html",
+
   "action": {
-    "default_title": "Open Dock Settings"
-  },
-  "commands": {
-    "toggle_dock": {
-      "suggested_key": {
-        "default": "Alt+Q",
-        "mac": "Command+B"
-      },
-      "description": "Toggle Dock Visibility"
+    "default_title": "Open Vertical Bookmarks",
+    "default_popup": "options.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
+
   "icons": {
-    "128": "icon.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   }
 }
