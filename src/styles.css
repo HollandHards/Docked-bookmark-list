@@ -23,9 +23,18 @@
   /* Default Base Style */
   background: rgba(255, 255, 255, 0.1);
   border-radius: 24px;
+
+  /* NEW: Overflow / Scrolling Support */
+  max-height: 90vh; /* Don't exceed 90% of screen height */
+  overflow-y: auto; /* Allow scrolling if too tall */
+  overflow-x: visible; /* Ensure tooltips/popups aren't cut off */
+  
+  /* Hide scrollbar visually but allow scrolling */
+  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  /* IE/Edge */
 }
 #my-mac-dock.dock-idle { opacity: var(--idle-opacity); }
-#my-mac-dock::-webkit-scrollbar { display: none; }
+#my-mac-dock::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
 
 /* --- THEME STYLES (Applying to Dock Container) --- */
 
@@ -74,6 +83,8 @@
 
 #my-mac-dock.bottom-side { left: var(--dock-offset); bottom: 0; flex-direction: row; align-items: flex-end; transform: translateX(-50%) translateY(100%); }
 #my-mac-dock.bottom-side.dock-visible { transform: translateX(-50%) translateY(-10px); }
+/* Horizontal docks need max-width, not max-height */
+#my-mac-dock.bottom-side, #my-mac-dock.top-side { max-width: 90vw; max-height: auto; overflow-x: auto; overflow-y: visible; }
 
 #my-mac-dock.top-side { left: var(--dock-offset); top: 0; flex-direction: row; align-items: flex-start; transform: translateX(-50%) translateY(-100%); }
 #my-mac-dock.top-side.dock-visible { transform: translateX(-50%) translateY(10px); }
@@ -99,6 +110,7 @@
   background: transparent; display: flex; align-items: center; justify-content: center;
   position: relative; z-index: 1; user-select: none; cursor: pointer;
   will-change: width, height; transition: margin 0.1s; font-family: inherit;
+  flex-shrink: 0; /* NEW: Prevent icons from squishing when scrolling */
 }
 #my-mac-dock.dock-idle .dock-item { transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), margin 0.1s; }
 
@@ -162,6 +174,5 @@
 #my-mac-dock.theme-enabled .dock-item.is-folder img { border-radius: var(--icon-radius); content: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"); background-color: var(--accent-color); -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); -webkit-mask-size: cover; mask-size: cover; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; width: 100%; height: 100%; transform: scale(1.1); }
 #my-mac-dock:not(.theme-enabled) .dock-item.is-folder img { border-radius: var(--icon-radius); content: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"); background-color: #44ccff; -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"); -webkit-mask-size: cover; mask-size: cover; transform: scale(1.1); }
 .dock-item.is-folder::before { display: none; }
-/* FIXED: Settings item now uses dynamic radius */
 .dock-item.settings-item img { object-fit: contain; border-radius: var(--icon-radius); background: transparent; }
 .dock-item.settings-item::before { display: none; }
