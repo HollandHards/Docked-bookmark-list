@@ -5,7 +5,6 @@ let settings = {
   dockPosition: 'left', dockSize: 48, edgeTrigger: false, handlerIcon: '',
   accentColor: '#007aff', showTooltips: true, separatorStyle: 'glass',
   enableShadow: true, enableGlow: true, enableAccent: true, showSettings: true,
-  // NEW DEFAULTS
   backdropBlur: 10, iconShape: '12px', idleOpacity: 100
 };
 
@@ -103,6 +102,7 @@ function refreshSettings() {
     'enableGlow', 'enableAccent', 'showSettings',
     'backdropBlur', 'iconShape', 'idleOpacity'
   ]).then((res) => {
+    // 1. Load Defaults
     settings.dockPosition = res.dockPosition || 'left';
     settings.dockSize = parseInt(res.dockSize) || 48;
     settings.edgeTrigger = res.edgeTrigger === true;
@@ -114,12 +114,13 @@ function refreshSettings() {
     settings.enableGlow = (res.enableGlow !== false);
     settings.enableAccent = (res.enableAccent !== false);
     settings.showSettings = (res.showSettings !== false);
+    
     settings.backdropBlur = (res.backdropBlur !== undefined) ? res.backdropBlur : 10;
     settings.iconShape = res.iconShape || '12px';
     settings.idleOpacity = (res.idleOpacity !== undefined) ? res.idleOpacity : 100;
-
     const vPos = res.verticalPos || 50;
-    
+
+    // 2. Apply CSS Variables
     dockContainer.style.setProperty('--dock-icon-size', settings.dockSize + 'px');
     dockContainer.style.setProperty('--dock-offset', vPos + '%');
     dockContainer.style.setProperty('--accent-color', settings.accentColor);
@@ -127,17 +128,24 @@ function refreshSettings() {
     dockContainer.style.setProperty('--icon-radius', settings.iconShape);
     dockContainer.style.setProperty('--idle-opacity', settings.idleOpacity / 100);
     
+    // 3. Apply Position Classes
     dockContainer.classList.remove('left-side', 'right-side', 'top-side', 'bottom-side');
     if(settings.dockPosition === 'right') dockContainer.classList.add('right-side');
     else if(settings.dockPosition === 'bottom') dockContainer.classList.add('bottom-side');
     else if(settings.dockPosition === 'top') dockContainer.classList.add('top-side');
     else dockContainer.classList.add('left-side');
 
+    // 4. Apply Feature Flags
     if (settings.showTooltips) dockContainer.classList.add('tooltips-enabled'); else dockContainer.classList.remove('tooltips-enabled');
     if (settings.enableShadow) dockContainer.classList.add('shadow-enabled'); else dockContainer.classList.remove('shadow-enabled');
     if (settings.enableGlow) dockContainer.classList.add('glow-enabled'); else dockContainer.classList.remove('glow-enabled');
     if (settings.enableAccent) dockContainer.classList.add('theme-enabled'); else dockContainer.classList.remove('theme-enabled');
 
+    // 5. Apply Theme Style to Dock Container
+    dockContainer.classList.remove('style-glass', 'style-neon', 'style-minimal', 'style-classic');
+    dockContainer.classList.add('style-' + settings.separatorStyle);
+
+    // 6. Update Handler
     const handler = dockContainer.querySelector('.dock-handler');
     if (handler) {
       handler.classList.add('has-icon');
