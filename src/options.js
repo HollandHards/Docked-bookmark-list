@@ -24,8 +24,14 @@ const addBtn = document.getElementById('addBtn');
 const DOCK_FOLDER_NAME = "Vertical-bookmark-list";
 let dragSrcId = null;
 
+// --- INITIAL LOAD ---
 document.addEventListener('DOMContentLoaded', async () => {
-  const storage = await DockAPI.storage.sync.get(['dockPosition', 'dockSize', 'customIcons', 'edgeTrigger', 'showTooltips', 'showSettings', 'verticalPos', 'handlerIcon', 'settingsIcon', 'accentColor', 'separatorStyle', 'enableShadow', 'enableGlow', 'enableAccent']);
+  const storage = await DockAPI.storage.sync.get([
+    'dockPosition', 'dockSize', 'customIcons', 'edgeTrigger', 
+    'showTooltips', 'showSettings', 'verticalPos', 'handlerIcon', 
+    'settingsIcon', 'accentColor', 'separatorStyle', 'enableShadow', 
+    'enableGlow', 'enableAccent'
+  ]);
   
   if(posSelect) posSelect.value = storage.dockPosition || 'left';
   if(sizeSlider) { sizeSlider.value = storage.dockSize || 48; if(sizeValue) sizeValue.textContent = sizeSlider.value + 'px'; }
@@ -41,8 +47,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   toggleColorInput(isAccentEnabled);
 
   if(vPosSlider) { vPosSlider.value = storage.verticalPos || 50; if(vPosValue) vPosValue.textContent = vPosSlider.value + '%'; }
+  
+  // FIX: Ensure text inputs are populated
   if(handlerIconInput) handlerIconInput.value = storage.handlerIcon || ''; 
-  if(settingsIconInput) settingsIconInput.value = (storage.settingsIcon === '_default_gear_') ? '' : (storage.settingsIcon || '');
+  if(settingsIconInput) settingsIconInput.value = storage.settingsIcon || '';
+
   if(accentColorInput) accentColorInput.value = storage.accentColor || '#007aff';
   document.body.style.setProperty('--accent-color', accentColorInput.value);
 
@@ -51,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function toggleColorInput(enabled) { if (colorContainer) { colorContainer.style.opacity = enabled ? '1' : '0.5'; colorContainer.style.pointerEvents = enabled ? 'auto' : 'none'; } }
 
+// --- ADD NEW ITEM ---
 if (itemTypeSelect) {
   itemTypeSelect.addEventListener('change', () => {
     const type = itemTypeSelect.value;
@@ -98,6 +108,7 @@ if (addBtn) {
   });
 }
 
+// --- BOOKMARK ACTIONS ---
 async function deleteBookmark(id) {
   if (confirm("Delete this item?")) {
     try { await DockAPI.bookmarks.remove(id); } catch (e) { await DockAPI.bookmarks.removeTree(id); }
@@ -122,6 +133,7 @@ async function refreshList() {
   renderList(bookmarks, storage.customIcons || {});
 }
 
+// --- SETTINGS LISTENERS ---
 function updateShortcutDisplay() {
   DockAPI.commands.getAll().then((commands) => {
     const command = commands.find(c => c.name === 'toggle_dock');
@@ -140,13 +152,17 @@ if(shadowCheck) shadowCheck.addEventListener('change', () => DockAPI.storage.syn
 if(glowCheck) glowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableGlow: glowCheck.checked }));
 if(accentCheck) accentCheck.addEventListener('change', () => { DockAPI.storage.sync.set({ enableAccent: accentCheck.checked }); toggleColorInput(accentCheck.checked); });
 if(vPosSlider) vPosSlider.addEventListener('input', (e) => { vPosValue.textContent = e.target.value + '%'; DockAPI.storage.sync.set({ verticalPos: e.target.value }); });
+
+// Save Input fields on every keystroke
 if(handlerIconInput) handlerIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ handlerIcon: e.target.value }); });
 if(settingsIconInput) settingsIconInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ settingsIcon: e.target.value }); });
+
 if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI.storage.sync.set({ accentColor: e.target.value }); document.body.style.setProperty('--accent-color', e.target.value); });
 if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
 
 window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
+// --- RENDER LIST & DRAG-DROP ---
 async function getDockBookmarks() {
   const tree = await DockAPI.bookmarks.getTree();
   let dockFolder = findFolder(tree, DOCK_FOLDER_NAME);
