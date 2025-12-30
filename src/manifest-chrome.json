@@ -1,29 +1,41 @@
 {
   "manifest_version": 3,
   "name": "Vertical Bookmark Dock",
-  "version": "1.7",
-  "description": "A customizable Mac-style dock for bookmarks.",
-  "permissions": ["storage", "activeTab", "scripting", "bookmarks", "contextMenus"],
-  "host_permissions": ["<all_urls>"],
-  
+  "version": "1.8",
+  "description": "A Mac-style animated dock for your bookmarks.",
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "css": ["styles.css"],
       "js": ["adapter.js", "content.js"],
-      "run_at": "document_start"
+      "run_at": "document_end"
     }
   ],
-  "web_accessible_resources": [{ "resources": ["icon.png", "gears.png"], "matches": ["<all_urls>"] }],
-  "background": {
-    "service_worker": "background-wrapper.js"
-  },
   "options_page": "options.html",
+  "action": {
+    "default_title": "Open Dock Settings"
+  },
   "commands": {
     "toggle_dock": {
-      "suggested_key": { "default": "Ctrl+Shift+L", "mac": "Command+Shift+L" },
-      "description": "Toggle the Dock"
+      "suggested_key": {
+        "default": "Alt+Q",
+        "mac": "Command+B"
+      },
+      "description": "Toggle Dock Visibility"
     }
   },
-  "icons": { "16": "icon.png", "32": "icon.png", "48": "icon.png", "128": "icon.png" }
+  "icons": {
+    "128": "icon.png"
+  }
 }
