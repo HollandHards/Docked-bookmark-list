@@ -73,7 +73,8 @@ if (!isFirefox && typeof chrome !== 'undefined') {
   }
 }
 
-// Make it available globally
+// FIX: Use globalThis to work in both Background (Service Worker) and Content Script
+globalThis.DockAPI = DockAPI;
 if (typeof window !== 'undefined') {
   window.DockAPI = DockAPI;
 }
