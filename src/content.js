@@ -10,26 +10,24 @@ let settings = {
 
 // --- INITIALIZATION ---
 function initDock() {
+  // Prevent duplicates
   if (document.getElementById('my-mac-dock')) return;
   
-  // Create Main Container
   dockContainer = document.createElement('div');
   dockContainer.id = 'my-mac-dock';
   dockContainer.classList.add('left-side', 'dock-idle'); 
   
-  // Create Trigger Handle
   const handler = document.createElement('div');
   handler.className = 'dock-handler';
   handler.title = "Hover to open Dock";
   
-  // Handle Opening
   handler.addEventListener('mouseenter', () => openDock());
   handler.addEventListener('click', (e) => { e.stopPropagation(); openDock(); });
   
   dockContainer.appendChild(handler);
   document.body.appendChild(dockContainer);
   
-  // Global Click Listener (Close if clicked outside)
+  // Close when clicking outside
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.dock-stack') && !e.target.closest('.dock-item') && !e.target.closest('.dock-handler')) {
       closeAllStacks();
@@ -38,17 +36,21 @@ function initDock() {
     closeContextMenu();
   });
   
-  // Mouse Enter: Keep open
-  dockContainer.addEventListener('mouseenter', () => {
-    clearTimeout(hideTimer); 
-    dockContainer.classList.remove('dock-idle');
+  // Mouse Enter/Leave Logic
+  dockContainer.addEventListener('mouseenter', () => { 
+      clearTimeout(hideTimer); 
+      dockContainer.classList.remove('dock-idle'); 
+  });
+  dockContainer.addEventListener('mouseleave', () => { 
+      dockContainer.classList.add('dock-idle'); 
+      resetIcons(); 
+      startHideTimer(); 
   });
 
-  // Mouse Move: Fisheye Effect
+  // Fisheye Animation
   dockContainer.addEventListener('mousemove', (e) => {
     if (!isDockVisible) return;
     clearTimeout(hideTimer);
-    
     const items = dockContainer.querySelectorAll('.dock-item');
     if(items.length === 0) return;
 
@@ -72,20 +74,13 @@ function initDock() {
     });
   });
 
-  // Mouse Leave: Auto-Close
-  dockContainer.addEventListener('mouseleave', () => {
-    dockContainer.classList.add('dock-idle'); 
-    resetIcons();
-    startHideTimer();
-  });
-
   refreshSettings();
 }
 
 function startHideTimer() {
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-        // Don't close if a Stack or Context Menu is open
+        // Don't close if a menu is open
         if (!document.querySelector('.dock-stack') && !document.querySelector('.dock-context-menu')) {
             toggleDock(false);
         }
@@ -95,36 +90,25 @@ function startHideTimer() {
 function resetIcons() {
   if (!dockContainer) return;
   const items = dockContainer.querySelectorAll('.dock-item');
-  items.forEach(item => { 
-    item.style.width = `${settings.dockSize}px`; 
-    item.style.height = `${settings.dockSize}px`; 
-  });
+  items.forEach(item => { item.style.width = `${settings.dockSize}px`; item.style.height = `${settings.dockSize}px`; });
 }
 
 function openDock() {
   clearTimeout(hideTimer);
-  // If dock is empty, fetch bookmarks first
   if (dockContainer.querySelectorAll('.dock-item').length === 0) {
     DockAPI.runtime.sendMessage({ action: "get_bookmarks_for_mouse" }).then((response) => {
-      if (response && response.data) { 
-          renderBookmarks(response.data); 
-          toggleDock(true); 
-      }
+      if (response && response.data) { renderBookmarks(response.data); toggleDock(true); }
     });
-  } else { 
-      toggleDock(true); 
-  }
+  } else { toggleDock(true); }
 }
 
-// --- SETTINGS APPLIER ---
 function refreshSettings() {
   DockAPI.storage.sync.get([
     'dockPosition', 'dockSize', 'edgeTrigger', 'verticalPos', 'handlerIcon', 
     'accentColor', 'showTooltips', 'separatorStyle', 'enableShadow', 
-    'enableGlow', 'enableAccent', 'showSettings',
-    'backdropBlur', 'iconShape', 'idleOpacity'
+    'enableGlow', 'enableAccent', 'showSettings', 'backdropBlur', 'iconShape', 'idleOpacity'
   ]).then((res) => {
-    // 1. Load Settings with Fallbacks
+    // Load
     settings.dockPosition = res.dockPosition || 'left';
     settings.dockSize = parseInt(res.dockSize) || 48;
     settings.edgeTrigger = res.edgeTrigger === true;
@@ -136,13 +120,13 @@ function refreshSettings() {
     settings.enableGlow = (res.enableGlow !== false);
     settings.enableAccent = (res.enableAccent !== false);
     settings.showSettings = (res.showSettings !== false);
-    
     settings.backdropBlur = (res.backdropBlur !== undefined) ? res.backdropBlur : 10;
     settings.iconShape = res.iconShape || '12px';
     settings.idleOpacity = (res.idleOpacity !== undefined) ? res.idleOpacity : 100;
-    const vPos = res.verticalPos || 50;
 
-    // 2. Apply CSS Variables
+    const vPos = res.verticalPos || 50;
+    
+    // Apply
     if(dockContainer) {
         dockContainer.style.setProperty('--dock-icon-size', settings.dockSize + 'px');
         dockContainer.style.setProperty('--dock-offset', vPos + '%');
@@ -151,7 +135,6 @@ function refreshSettings() {
         dockContainer.style.setProperty('--icon-radius', settings.iconShape);
         dockContainer.style.setProperty('--idle-opacity', settings.idleOpacity / 100);
         
-        // 3. Apply Classes
         dockContainer.classList.remove('left-side', 'right-side', 'top-side', 'bottom-side');
         if(settings.dockPosition === 'right') dockContainer.classList.add('right-side');
         else if(settings.dockPosition === 'bottom') dockContainer.classList.add('bottom-side');
@@ -177,31 +160,27 @@ function refreshSettings() {
   });
 }
 
-// --- LISTENERS ---
+// Listeners
 DockAPI.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "toggle_dock") { refreshSettings(); renderBookmarks(request.data); toggleDock(!isDockVisible); }
   if (request.action === "refresh_dock") { renderBookmarks(request.data); refreshSettings(); }
 });
 
-// Live Settings Listener
 if (chrome.storage && chrome.storage.onChanged) {
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'sync') {
       refreshSettings();
       if (changes.customIcons || changes.enableAccent) {
-         DockAPI.runtime.sendMessage({ action: "get_bookmarks_for_mouse" }).then((response) => {
-             if (response && response.data) renderBookmarks(response.data);
-         });
+         DockAPI.runtime.sendMessage({ action: "get_bookmarks_for_mouse" }).then((response) => { if (response && response.data) renderBookmarks(response.data); });
       }
     }
   });
 }
 
-// Global Mouse Tracker (Auto-Open / Auto-Close)
+// Auto-Open/Close Logic
 document.addEventListener('mousemove', (e) => {
   if (!dockContainer) return;
   
-  // Auto Open
   if (settings.edgeTrigger && !isDockVisible) {
     const edgeThreshold = 15;
     let hitEdge = false;
@@ -212,16 +191,13 @@ document.addEventListener('mousemove', (e) => {
     if (hitEdge) openDock();
   } 
   
-  // Auto Close (Safety Net)
   if (isDockVisible) {
     if (document.querySelector('.dock-stack') || document.querySelector('.dock-context-menu')) return;
     let dist = 0; const buffer = 150;
-    
     if (settings.dockPosition === 'left') dist = e.clientX - settings.dockSize;
     if (settings.dockPosition === 'right') dist = (window.innerWidth - settings.dockSize) - e.clientX;
     if (settings.dockPosition === 'top') dist = e.clientY - settings.dockSize;
     if (settings.dockPosition === 'bottom') dist = (window.innerHeight - settings.dockSize) - e.clientY;
-    
     if (dist > buffer) { toggleDock(false); }
   }
 });
@@ -229,226 +205,79 @@ document.addEventListener('mousemove', (e) => {
 function toggleDock(show) {
   isDockVisible = show;
   if(!dockContainer) return;
-  
-  if (show) { 
-      dockContainer.classList.add('dock-visible'); 
-  } else { 
-      dockContainer.classList.remove('dock-visible'); 
-      closeAllStacks(); 
-      closeContextMenu(); 
-      dockContainer.classList.add('dock-idle');
-      resetIcons();
-  }
+  if (show) dockContainer.classList.add('dock-visible');
+  else { dockContainer.classList.remove('dock-visible'); closeAllStacks(); closeContextMenu(); dockContainer.classList.add('dock-idle'); resetIcons(); }
 }
 
-function closeAllStacks() { const stacks = document.querySelectorAll('.dock-stack'); stacks.forEach(s => s.remove()); }
+function closeAllStacks() { document.querySelectorAll('.dock-stack').forEach(s => s.remove()); }
 function closeContextMenu() { const existing = document.querySelector('.dock-context-menu'); if (existing) existing.remove(); }
 
-// --- KEYBOARD NAVIGATION (NEW) ---
+// Keyboard Nav
 let selectedIndex = -1;
 document.addEventListener('keydown', (e) => {
   if (!isDockVisible || !dockContainer) return;
   const items = Array.from(dockContainer.querySelectorAll('.dock-item'));
   if (items.length === 0) return;
-
-  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-    e.preventDefault();
-    selectedIndex = (selectedIndex + 1) % items.length;
-    highlightItem(items[selectedIndex]);
-  } 
-  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-    e.preventDefault();
-    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-    highlightItem(items[selectedIndex]);
-  } 
-  else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (selectedIndex > -1 && items[selectedIndex]) {
-      items[selectedIndex].click();
-      toggleDock(false);
-    }
-  }
-  else if (e.key === 'Escape') {
-    toggleDock(false);
-  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); selectedIndex = (selectedIndex + 1) % items.length; highlightItem(items[selectedIndex]); } 
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); selectedIndex = (selectedIndex - 1 + items.length) % items.length; highlightItem(items[selectedIndex]); } 
+  else if (e.key === 'Enter') { e.preventDefault(); if (selectedIndex > -1 && items[selectedIndex]) { items[selectedIndex].click(); toggleDock(false); } }
+  else if (e.key === 'Escape') { toggleDock(false); }
 });
 
 function highlightItem(item) {
-  dockContainer.querySelectorAll('.dock-item').forEach(i => {
-    i.style.transform = 'scale(1)'; i.style.zIndex = '1'; i.style.filter = 'none';
-  });
+  dockContainer.querySelectorAll('.dock-item').forEach(i => { i.style.transform = 'scale(1)'; i.style.zIndex = '1'; i.style.filter = 'none'; });
   item.style.transform = 'scale(1.5)'; item.style.zIndex = '100';
   const img = item.querySelector('img');
   if(img && settings.enableGlow) img.style.filter = `drop-shadow(0 0 10px ${settings.accentColor})`;
 }
 
-// --- RENDERING ---
+// Rendering
 function renderBookmarks(bookmarks) {
   if(!dockContainer) return;
   const handler = dockContainer.querySelector('.dock-handler');
   dockContainer.innerHTML = ''; 
   if(handler) dockContainer.appendChild(handler);
-
   if(!bookmarks || bookmarks.length === 0) return;
 
   bookmarks.forEach((bm) => {
-    // Spacer
-    if (bm.title === "-") { 
-        const spacer = document.createElement('div'); 
-        spacer.className = 'dock-spacer'; 
-        dockContainer.appendChild(spacer); 
-        return; 
-    }
-    // Header
+    if (bm.title === "-") { const spacer = document.createElement('div'); spacer.className = 'dock-spacer'; dockContainer.appendChild(spacer); return; }
     const cleanTitle = bm.title.trim();
-    if (cleanTitle.startsWith("---") && cleanTitle.endsWith("---") && cleanTitle.length > 6) {
-        const header = document.createElement('div'); 
-        header.className = `dock-section-header style-${settings.separatorStyle}`;
-        header.innerText = cleanTitle.replace(/---/g, '').trim(); 
-        dockContainer.appendChild(header); 
-        return;
-    }
-
+    if (cleanTitle.startsWith("---") && cleanTitle.endsWith("---") && cleanTitle.length > 6) { const header = document.createElement('div'); header.className = `dock-section-header style-${settings.separatorStyle}`; header.innerText = cleanTitle.replace(/---/g, '').trim(); dockContainer.appendChild(header); return; }
     const item = document.createElement(bm.children ? 'div' : 'a');
-    item.className = 'dock-item'; 
-    item.title = bm.title;
-    if (bm.iconUrl && !bm.iconUrl.startsWith('_default')) {
-        item.style.setProperty('--bg-image', `url('${bm.iconUrl}')`);
-    }
-
+    item.className = 'dock-item'; item.title = bm.title;
+    if (bm.iconUrl && !bm.iconUrl.startsWith('_default')) item.style.setProperty('--bg-image', `url('${bm.iconUrl}')`);
     let iconEl;
     if (bm.children) {
-      item.classList.add('is-folder'); 
-      iconEl = document.createElement('img'); 
-      iconEl.src = bm.iconUrl; 
+      item.classList.add('is-folder'); iconEl = document.createElement('img'); iconEl.src = bm.iconUrl; 
       item.onclick = (e) => { e.stopPropagation(); toggleStack(bm, item); };
-      
-      // Middle Click -> Open All in Background
-      item.addEventListener('auxclick', (e) => {
-          if (e.button === 1) { // Middle click
-              e.preventDefault(); e.stopPropagation();
-              bm.children.forEach(child => {
-                  if(child.url) DockAPI.runtime.sendMessage({ action: "open_new_window", url: child.url }); // Reusing message, or create new "open_tab"
-              });
-          }
-      });
-
+      item.addEventListener('auxclick', (e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); bm.children.forEach(child => { if(child.url) DockAPI.runtime.sendMessage({ action: "open_new_window", url: child.url }); }); } });
       item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
     } else if (bm.id === 'dock_settings_item') {
-       item.classList.add('settings-item'); 
-       item.href = "#";
-       item.onclick = (e) => { e.preventDefault(); DockAPI.runtime.sendMessage({ action: "open_settings" }); toggleDock(false); };
-       iconEl = document.createElement('img'); 
-       iconEl.src = bm.iconUrl; 
-       item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
+       item.classList.add('settings-item'); item.href = "#"; item.onclick = (e) => { e.preventDefault(); DockAPI.runtime.sendMessage({ action: "open_settings" }); toggleDock(false); }; iconEl = document.createElement('img'); iconEl.src = bm.iconUrl; item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
     } else {
-       item.href = bm.url; 
-       item.target = "_blank"; // Left click = New Tab foreground
-       item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
-       iconEl = document.createElement('img'); 
-       iconEl.src = bm.iconUrl;
+       item.href = bm.url; item.target = "_blank"; item.addEventListener('contextmenu', (e) => showContextMenu(e, bm)); iconEl = document.createElement('img'); iconEl.src = bm.iconUrl;
     }
-    item.ondragstart = () => false; 
-    item.appendChild(iconEl); 
-    dockContainer.appendChild(item);
+    item.ondragstart = () => false; item.appendChild(iconEl); dockContainer.appendChild(item);
   });
-}
-
-function showContextMenu(e, bm) {
-  e.preventDefault(); closeContextMenu();
-  clearTimeout(hideTimer); 
-  const menu = document.createElement('div');
-  menu.className = 'dock-context-menu';
-  menu.style.setProperty('--accent-color', settings.accentColor);
-  menu.addEventListener('mouseleave', () => { startHideTimer(); });
-  menu.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-  
-  const addItem = (text, onClick, isDestructive = false) => {
-    const item = document.createElement('div');
-    item.className = 'ctx-item'; item.innerText = text;
-    if (isDestructive) item.style.color = '#ff4d4d'; 
-    item.onclick = (ev) => { ev.stopPropagation(); onClick(); closeContextMenu(); };
-    menu.appendChild(item);
-  };
-
-  addItem("Add Current Page to Dock", () => DockAPI.runtime.sendMessage({ action: "add_current_tab" }));
-  const sep1 = document.createElement('div'); sep1.className = 'ctx-sep'; menu.appendChild(sep1);
-
-  if (bm.id === 'dock_settings_item') { 
-      addItem("Open Settings", () => DockAPI.runtime.sendMessage({ action: "open_settings" })); 
-  } else {
-      addItem("Open in New Window", () => DockAPI.runtime.sendMessage({ action: "open_new_window", url: bm.url }));
-      addItem("Open in Incognito", () => DockAPI.runtime.sendMessage({ action: "open_incognito", url: bm.url }));
-      const sep2 = document.createElement('div'); sep2.className = 'ctx-sep'; menu.appendChild(sep2);
-      addItem("Edit Name", () => { const newTitle = prompt("Enter new name:", bm.title); if (newTitle && newTitle !== bm.title) DockAPI.runtime.sendMessage({ action: "rename_bookmark", id: bm.id, title: newTitle }); });
-      addItem("Change Icon URL", () => { const newIcon = prompt("Enter new image URL (leave empty to reset):", ""); if (newIcon !== null) DockAPI.runtime.sendMessage({ action: "update_icon", id: bm.id, url: newIcon }); });
-      const sep3 = document.createElement('div'); sep3.className = 'ctx-sep'; menu.appendChild(sep3);
-      addItem("Remove from Dock", () => { if (confirm(`Delete "${bm.title}" from your bookmarks?`)) DockAPI.runtime.sendMessage({ action: "delete_bookmark", id: bm.id }); }, true);
-  }
-  
-  const sepGlobal = document.createElement('div'); sepGlobal.className = 'ctx-sep'; menu.appendChild(sepGlobal);
-  addItem(settings.showSettings ? "Hide Settings Icon" : "Show Settings Icon", () => {
-      const newState = !settings.showSettings;
-      DockAPI.storage.sync.set({ showSettings: newState }).then(() => DockAPI.runtime.sendMessage({ action: "request_refresh" }));
-  });
-  
-  document.body.appendChild(menu);
-  
-  // Menu Positioning
-  const menuRect = menu.getBoundingClientRect();
-  const winWidth = window.innerWidth; const winHeight = window.innerHeight;
-  let posX = e.clientX + 5; let posY = e.clientY + 5;
-  
-  if (posY + menuRect.height > winHeight) posY = e.clientY - menuRect.height - 5;
-  if (posX + menuRect.width > winWidth) posX = e.clientX - menuRect.width - 5;
-  if (posY < 0) posY = 5;
-  
-  menu.style.left = `${posX}px`; menu.style.top = `${posY}px`;
 }
 
 function toggleStack(bookmark, anchorElement) {
   const existing = document.querySelector(`.dock-stack[data-parent="${bookmark.id}"]`);
   if (existing) { existing.remove(); return; }
-  closeAllStacks(); 
-  clearTimeout(hideTimer); 
-  
-  const stack = document.createElement('div'); 
-  stack.className = 'dock-stack';
-  stack.dataset.parent = bookmark.id; 
-  stack.style.setProperty('--accent-color', settings.accentColor);
-  
-  stack.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-  stack.addEventListener('mouseleave', () => startHideTimer());
-  
+  closeAllStacks(); clearTimeout(hideTimer); 
+  const stack = document.createElement('div'); stack.className = 'dock-stack'; stack.dataset.parent = bookmark.id; stack.style.setProperty('--accent-color', settings.accentColor);
+  stack.addEventListener('mouseenter', () => clearTimeout(hideTimer)); stack.addEventListener('mouseleave', () => startHideTimer());
   if (bookmark.children && bookmark.children.length > 0) {
     bookmark.children.forEach(child => {
-       const link = document.createElement('a'); 
-       link.className = 'stack-item';
-       link.href = child.url || '#'; 
-       link.target = "_blank"; 
-       link.title = child.title;
-       
-       const icon = document.createElement('img'); 
-       icon.src = child.iconUrl;
-       const span = document.createElement('span'); 
-       span.innerText = child.title;
-       
-       link.appendChild(icon); link.appendChild(span); 
-       stack.appendChild(link);
+       const link = document.createElement('a'); link.className = 'stack-item'; link.href = child.url || '#'; link.target = "_blank"; link.title = child.title;
+       const icon = document.createElement('img'); icon.src = child.iconUrl; const span = document.createElement('span'); span.innerText = child.title; link.appendChild(icon); link.appendChild(span); stack.appendChild(link);
     });
-  } else {
-    stack.innerText = "Empty Folder"; 
-    stack.style.color = "#555"; 
-    stack.style.padding = "10px"; 
-    stack.style.fontSize = "12px";
-  }
-
+  } else { stack.innerText = "Empty Folder"; stack.style.color = "#555"; stack.style.padding = "10px"; stack.style.fontSize = "12px"; }
   const rect = anchorElement.getBoundingClientRect();
   if (settings.dockPosition === 'left') { stack.style.top = (rect.top - (bookmark.children.length * 2)) + 'px'; stack.style.left = (rect.right + 15) + 'px'; }
   else if (settings.dockPosition === 'right') { stack.style.top = (rect.top - (bookmark.children.length * 2)) + 'px'; stack.style.right = (window.innerWidth - rect.left + 15) + 'px'; }
   else if (settings.dockPosition === 'bottom') { stack.style.bottom = (window.innerHeight - rect.top + 15) + 'px'; stack.style.left = (rect.left - 50) + 'px'; }
   else if (settings.dockPosition === 'top') { stack.style.top = (rect.bottom + 15) + 'px'; stack.style.left = (rect.left - 50) + 'px'; }
-  
   document.body.appendChild(stack);
 }
 
