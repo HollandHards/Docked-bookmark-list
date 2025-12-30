@@ -1,133 +1,17 @@
+importScripts('adapter.js');
+
 const DOCK_FOLDER_NAME = "Vertical-bookmark-list";
 
-// 1. AUTO-SETUP ON INSTALL
-// This runs once when the user installs the extension
-if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onInstalled) {
-  chrome.runtime.onInstalled.addListener(async () => {
-    await getOrCreateDockFolder();
-  });
-} 
-else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onInstalled) {
-  browser.runtime.onInstalled.addListener(async () => {
-    await getOrCreateDockFolder();
-  });
-}
-
-async function getOrCreateDockFolder() {
+// --- HELPERS ---
+async function getDockFolderId() {
   const tree = await DockAPI.bookmarks.getTree();
   let dockFolder = findFolder(tree, DOCK_FOLDER_NAME);
-  
   if (!dockFolder) {
-    // "Other Bookmarks" usually has ID '2' in Chrome and 'unfiled_____' in Firefox
-    const rootChildren = tree[0].children;
-    const parent = rootChildren.find(c => c.id === '2' || c.id === 'unfiled_____') || rootChildren[rootChildren.length - 1]; 
-    
-    dockFolder = await DockAPI.bookmarks.create({
-      parentId: parent.id,
-      title: DOCK_FOLDER_NAME
-    });
-    
-    // UPDATED: Default bookmark now points to your GitHub Repo
-    await DockAPI.bookmarks.create({
-      parentId: dockFolder.id,
-      title: "Welcome! Right-click to add pages",
-      url: "https://github.com/HollandHards/Docked-bookmark-list/"
-    });
+    // Try to find "Other Bookmarks" or root
+    const parent = tree[0].children.find(c => c.id === '2') || tree[0];
+    dockFolder = await DockAPI.bookmarks.create({ parentId: parent.id, title: DOCK_FOLDER_NAME });
   }
-  return dockFolder;
-}
-
-async function getDockBookmarks() {
-  const dockFolder = await getOrCreateDockFolder();
-  const children = await DockAPI.bookmarks.getChildren(dockFolder.id);
-  
-  const syncStorage = await DockAPI.storage.sync.get(['customIcons', 'settingsIcon', 'showSettings']);
-  const localStorage = await DockAPI.storage.local.get(['faviconCache']);
-  
-  const customIcons = syncStorage.customIcons || {};
-  const faviconCache = localStorage.faviconCache || {};
-  
-  const settingsIcon = (syncStorage.settingsIcon && syncStorage.settingsIcon.trim() !== '') 
-    ? syncStorage.settingsIcon 
-    : DockAPI.runtime.getURL("gears.png");
-
-  const itemsToCache = [];
-
-  const processNode = async (bm) => {
-    let iconUrl = '';
-    
-    if (customIcons[bm.id]) {
-      iconUrl = customIcons[bm.id];
-    } else if (faviconCache[bm.id]) {
-      iconUrl = faviconCache[bm.id];
-    } else if (bm.url) {
-      if (!bm.url.startsWith('data:')) {
-        try {
-            const urlObj = new URL(bm.url);
-            iconUrl = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
-            itemsToCache.push({ id: bm.id, url: iconUrl });
-        } catch(e) { iconUrl = ""; }
-      } else {
-        iconUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzQ0Y2NmZiI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+";
-      }
-    } else {
-      iconUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzQ0Y2NmZiI+PHBhdGggZD0iTTEwIDRINmMtMS4xIDAtMiAuOS0yIDJ2MTJjMCAxLjEuOSAyIDIgMmgxMmMxLjEgMCAyLS45IDItMlY4YzAtMS4xLS45LTItMi0yaC04bC0yLTJ6Ii8+PC9zdmc+"; 
-    }
-
-    const item = { 
-      id: bm.id, 
-      title: bm.title, 
-      url: bm.url, 
-      iconUrl: iconUrl,
-      index: bm.index,
-      parentId: bm.parentId
-    };
-
-    if (!bm.url) {
-      const subChildren = await DockAPI.bookmarks.getChildren(bm.id);
-      item.children = await Promise.all(subChildren.map(child => processNode(child)));
-    }
-
-    return item;
-  };
-
-  const bookmarks = await Promise.all(children.map(processNode));
-
-  if (itemsToCache.length > 0) {
-    cacheMissingIcons(itemsToCache);
-  }
-
-  if (syncStorage.showSettings !== false) {
-    bookmarks.push({ title: "-", id: "spacer_settings" });
-    bookmarks.push({
-      id: "dock_settings_item",
-      title: "Settings",
-      url: "#settings",
-      iconUrl: settingsIcon
-    });
-  }
-
-  return bookmarks;
-}
-
-async function cacheMissingIcons(items) {
-  const storage = await DockAPI.storage.local.get(['faviconCache']);
-  const cache = storage.faviconCache || {};
-
-  for (const item of items) {
-    try {
-      const response = await fetch(item.url);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        cache[item.id] = reader.result;
-        DockAPI.storage.local.set({ faviconCache: cache });
-      };
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      // console.log(`Failed to cache icon for ${item.id}`, err);
-    }
-  }
+  return dockFolder.id;
 }
 
 function findFolder(nodes, name) {
@@ -141,73 +25,126 @@ function findFolder(nodes, name) {
   return null;
 }
 
-function broadcastRefresh() {
-  getDockBookmarks().then(bookmarks => {
-    DockAPI.tabs.query({active: true, currentWindow: true}).then(tabs => {
-      if (tabs[0]?.id) {
-        DockAPI.tabs.sendMessage(tabs[0].id, { action: "refresh_dock", data: bookmarks })
-          .catch(() => {}); 
-      }
-    });
-  });
+function getFaviconUrl(u) {
+  try {
+    const urlObj = new URL(u);
+    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=128`;
+  } catch (e) {
+    return '_default';
+  }
 }
 
-if (DockAPI.commands && DockAPI.commands.onCommand) {
-  DockAPI.commands.onCommand.addListener(async (command) => {
-    if (command === "toggle_dock") {
-      const bookmarks = await getDockBookmarks();
-      const tabs = await DockAPI.tabs.query({active: true, currentWindow: true});
-      if (tabs[0]?.id) {
-        DockAPI.tabs.sendMessage(tabs[0].id, { action: "toggle_dock", data: bookmarks });
-      }
+async function getBookmarksForDock() {
+  const folderId = await getDockFolderId();
+  const children = await DockAPI.bookmarks.getChildren(folderId);
+  const settings = await DockAPI.storage.sync.get(['customIcons', 'showSettings', 'settingsIcon']);
+  const customIcons = settings.customIcons || {};
+  
+  const processNode = (node) => {
+    const isFolder = !node.url;
+    let iconUrl = customIcons[node.id];
+    
+    if (!iconUrl) {
+      if (isFolder) iconUrl = '_default_folder'; // Handled in CSS
+      else iconUrl = getFaviconUrl(node.url);
     }
-  });
+    
+    return {
+      id: node.id,
+      title: node.title,
+      url: node.url,
+      iconUrl: iconUrl,
+      children: isFolder ? [] : null 
+    };
+  };
+
+  const processed = [];
+  for (const child of children) {
+    const pChild = processNode(child);
+    if (pChild.children) {
+        // Fetch one level deep for stacks
+        const subChildren = await DockAPI.bookmarks.getChildren(child.id);
+        pChild.children = subChildren.map(sub => processNode(sub));
+    }
+    processed.push(pChild);
+  }
+
+  // Add Settings Icon if enabled
+  if (settings.showSettings !== false) {
+    processed.push({
+        id: 'dock_settings_item',
+        title: 'Dock Settings',
+        url: '',
+        iconUrl: settings.settingsIcon || DockAPI.runtime.getURL("icon.png"),
+        children: null
+    });
+  }
+
+  return processed;
 }
 
-DockAPI.runtime.onMessage.addListener((request, sender) => {
+// --- MESSAGE LISTENER ---
+DockAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // 1. Fetch Data
   if (request.action === "get_bookmarks_for_mouse") {
-    return getDockBookmarks().then(bookmarks => {
-      return { data: bookmarks };
-    });
+    getBookmarksForDock().then(data => sendResponse({ data }));
+    return true; // Keep channel open for async response
   }
   
-  if (request.action === "request_refresh") {
-    broadcastRefresh();
+  // 2. Actions
+  if (request.action === "open_settings") {
+    DockAPI.runtime.openOptionsPage();
   }
-  
   if (request.action === "add_current_tab") {
-    DockAPI.tabs.query({active: true, currentWindow: true}).then(async (tabs) => {
-        const tab = tabs[0];
-        if (tab && tab.url) {
-            const dockFolder = await getOrCreateDockFolder();
-            await DockAPI.bookmarks.create({
-                parentId: dockFolder.id,
-                title: tab.title,
-                url: tab.url
-            });
-            broadcastRefresh();
-        }
+    DockAPI.tabs.query({active: true, currentWindow: true}, async (tabs) => {
+       if(tabs[0]) {
+           const folderId = await getDockFolderId();
+           await DockAPI.bookmarks.create({ parentId: folderId, title: tabs[0].title, url: tabs[0].url });
+           broadcastRefresh();
+       }
     });
   }
-
-  if (request.action === "open_settings") { DockAPI.runtime.openOptionsPage(); }
-  if (request.action === "open_new_window") { DockAPI.windows.create({ url: request.url }); }
-  if (request.action === "open_incognito") { DockAPI.windows.create({ url: request.url, incognito: true }); }
-  
+  if (request.action === "open_new_window") {
+      DockAPI.tabs.create({ url: request.url });
+  }
+  if (request.action === "open_incognito") {
+      DockAPI.windows.create({ url: request.url, incognito: true });
+  }
   if (request.action === "rename_bookmark") {
-    DockAPI.bookmarks.update(request.id, { title: request.title }).then(() => broadcastRefresh());
+      DockAPI.bookmarks.update(request.id, { title: request.title }).then(broadcastRefresh);
   }
   if (request.action === "delete_bookmark") {
-    DockAPI.bookmarks.remove(request.id).then(() => broadcastRefresh());
+      DockAPI.bookmarks.remove(request.id).then(broadcastRefresh);
   }
   if (request.action === "update_icon") {
-    DockAPI.storage.sync.get(['customIcons']).then((result) => {
-      const icons = result.customIcons || {};
-      if (request.url) { icons[request.id] = request.url; } 
-      else { delete icons[request.id]; }
-      DockAPI.storage.sync.set({ customIcons: icons }).then(() => broadcastRefresh());
+      DockAPI.storage.sync.get(['customIcons']).then((res) => {
+          const icons = res.customIcons || {};
+          if (request.url) icons[request.id] = request.url;
+          else delete icons[request.id];
+          DockAPI.storage.sync.set({ customIcons: icons }).then(broadcastRefresh);
+      });
+  }
+  if (request.action === "request_refresh") {
+      broadcastRefresh();
+  }
+});
+
+// --- COMMAND LISTENER (Shortcuts) ---
+DockAPI.commands.onCommand.addListener(async (command) => {
+  if (command === "toggle_dock") {
+    const data = await getBookmarksForDock();
+    DockAPI.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (tabs[0]) DockAPI.tabs.sendMessage(tabs[0].id, { action: "toggle_dock", data: data });
     });
   }
-  
-  return false; 
 });
+
+// --- BROADCAST TO TABS ---
+async function broadcastRefresh() {
+  const data = await getBookmarksForDock();
+  DockAPI.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+        DockAPI.tabs.sendMessage(tab.id, { action: "refresh_dock", data: data }).catch(() => {});
+    });
+  });
+}
