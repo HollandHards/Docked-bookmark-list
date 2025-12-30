@@ -47,15 +47,15 @@
     border-radius: 16px;
 }
 
-/* 3. Minimal (Invisible Background) */
+/* 3. Minimal (Invisible Background) - UPDATED: No borders */
 #my-mac-dock.style-minimal { 
     background: transparent;
     border: none;
     backdrop-filter: none;
     box-shadow: none;
 }
-#my-mac-dock.style-minimal.left-side { border-right: 2px solid rgba(128,128,128,0.2); padding-right: 5px; border-radius: 0; }
-#my-mac-dock.style-minimal.right-side { border-left: 2px solid rgba(128,128,128,0.2); padding-left: 5px; border-radius: 0; }
+#my-mac-dock.style-minimal.left-side { padding-right: 5px; border-radius: 0; }
+#my-mac-dock.style-minimal.right-side { padding-left: 5px; border-radius: 0; }
 
 /* 4. Classic (Retro White) */
 #my-mac-dock.style-classic { 
@@ -105,7 +105,7 @@
 
 .dock-item img { 
     width: 100%; height: 100%; object-fit: cover; 
-    border-radius: var(--icon-radius); /* KEY FIX */
+    border-radius: var(--icon-radius);
     pointer-events: none; transition: filter 0.2s ease; position: relative; z-index: 2; 
 }
 
