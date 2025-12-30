@@ -1,28 +1,29 @@
 {
   "manifest_version": 3,
-  "name": "Vertical Bookmark List",
-  "version": "1.0",
-  "description": "Automatically organizes and displays bookmarks from the Vertical-bookmark-list folder.",
-  "author": "Your Name",
+  "name": "Vertical Bookmark Dock",
+  "version": "1.7",
+  "description": "A customizable Mac-style dock for bookmarks.",
+  "permissions": ["storage", "activeTab", "scripting", "bookmarks", "contextMenus"],
+  "host_permissions": ["<all_urls>"],
   
-  "permissions": [
-    "bookmarks",
-    "storage" 
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["styles.css"],
+      "js": ["adapter.js", "content.js"],
+      "run_at": "document_start"
+    }
   ],
-
+  "web_accessible_resources": [{ "resources": ["icon.png", "gears.png"], "matches": ["<all_urls>"] }],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background-wrapper.js"
   },
-
-  "action": {
-    "default_title": "Open Vertical Bookmarks",
-    "default_popup": "options.html",
-   }
-
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
+  "options_page": "options.html",
+  "commands": {
+    "toggle_dock": {
+      "suggested_key": { "default": "Ctrl+Shift+L", "mac": "Command+Shift+L" },
+      "description": "Toggle the Dock"
+    }
   },
-
-  "offline_enabled": true
+  "icons": { "16": "icon.png", "32": "icon.png", "48": "icon.png", "128": "icon.png" }
 }
