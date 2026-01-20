@@ -13,6 +13,15 @@
     .section-title { grid-column: 1 / -1; font-size: 14px; font-weight: 700; text-transform: uppercase; color: #888; margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
 
     .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    
+    /* NEW: Indentation class for sub-settings */
+    .setting-row.indent {
+        margin-left: 15px;
+        padding-left: 10px;
+        border-left: 2px solid #eee;
+    }
+    .setting-row.indent label { font-size: 13px; color: #555; }
+
     label { font-weight: 500; font-size: 14px; }
     
     input[type="checkbox"] { transform: scale(1.2); accent-color: var(--accent-color); }
@@ -107,11 +116,25 @@
       </div>
 
       <div class="setting-row">
-        <label>Icon Glow/Zoom</label>
-        <input type="checkbox" id="enableGlow" checked>
+        <label>Hover Effect</label>
+        <select id="hoverStyle">
+          <option value="glow">Glow (Default)</option>
+          <option value="line">Solid Line</option>
+          <option value="none">None</option>
+        </select>
       </div>
 
-      <div class="section-title">Visual Effects (New)</div>
+      <div class="setting-row indent">
+        <label>Line Thickness</label>
+        <input type="range" id="lineThickness" min="1" max="10" value="3" title="Border width">
+      </div>
+
+      <div class="setting-row indent">
+        <label>Always Visible?</label>
+        <input type="checkbox" id="persistentLine" title="Show the border permanently, not just on hover">
+      </div>
+
+      <div class="section-title">Visual Effects</div>
 
       <div class="setting-row">
         <label>Backdrop Blur</label>
@@ -135,6 +158,11 @@
       <div class="setting-row">
         <label>Drop Shadow</label>
         <input type="checkbox" id="enableShadow" checked>
+      </div>
+
+      <div class="setting-row">
+        <label>Show Settings Icon</label>
+        <input type="checkbox" id="showSettings" checked>
       </div>
 
     </div>
