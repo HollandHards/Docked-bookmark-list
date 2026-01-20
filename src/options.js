@@ -7,7 +7,7 @@ const tooltipCheck = document.getElementById('showTooltips');
 const settingsCheck = document.getElementById('showSettings');
 const separatorSelect = document.getElementById('separatorStyle');
 const shadowCheck = document.getElementById('enableShadow');
-const glowCheck = document.getElementById('enableGlow');
+const hoverSelect = document.getElementById('hoverStyle'); 
 const accentCheck = document.getElementById('enableAccent');
 const colorContainer = document.getElementById('colorContainer');
 const vPosSlider = document.getElementById('verticalPos');
@@ -17,10 +17,13 @@ const currentShortcut = document.getElementById('currentShortcut');
 const settingsIconInput = document.getElementById('settingsIcon');
 const accentColorInput = document.getElementById('accentColor');
 
-// NEW ELEMENTS
 const blurSlider = document.getElementById('backdropBlur');
 const shapeSelect = document.getElementById('iconShape');
 const opacitySlider = document.getElementById('idleOpacity');
+
+// NEW CONSTANTS
+const thicknessSlider = document.getElementById('lineThickness');
+const persistentCheck = document.getElementById('persistentLine');
 
 const itemTypeSelect = document.getElementById('itemType');
 const newTitleInput = document.getElementById('newTitle');
@@ -36,8 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     'dockPosition', 'dockSize', 'customIcons', 'edgeTrigger', 
     'showTooltips', 'showSettings', 'verticalPos', 'handlerIcon', 
     'settingsIcon', 'accentColor', 'separatorStyle', 'enableShadow', 
-    'enableGlow', 'enableAccent', 
-    'backdropBlur', 'iconShape', 'idleOpacity'
+    'hoverStyle', 'enableAccent', 'backdropBlur', 'iconShape', 'idleOpacity',
+    'lineThickness', 'persistentLine' // NEW KEYS
   ]);
   
   if(posSelect) posSelect.value = storage.dockPosition || 'left';
@@ -47,7 +50,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if(settingsCheck) settingsCheck.checked = (storage.showSettings !== false);
   if(separatorSelect) separatorSelect.value = storage.separatorStyle || 'glass';
   if(shadowCheck) shadowCheck.checked = (storage.enableShadow !== false);
-  if(glowCheck) glowCheck.checked = (storage.enableGlow !== false);
+  
+  if(hoverSelect) hoverSelect.value = storage.hoverStyle || 'glow';
+
+  // NEW: Load Line Settings
+  if(thicknessSlider) thicknessSlider.value = storage.lineThickness || 3;
+  if(persistentCheck) persistentCheck.checked = storage.persistentLine === true;
 
   if(blurSlider) blurSlider.value = (storage.backdropBlur !== undefined) ? storage.backdropBlur : 10;
   if(shapeSelect) shapeSelect.value = storage.iconShape || '12px';
@@ -77,11 +85,17 @@ if(tooltipCheck) tooltipCheck.addEventListener('change', () => DockAPI.storage.s
 if(settingsCheck) settingsCheck.addEventListener('change', () => DockAPI.storage.sync.set({ showSettings: settingsCheck.checked }));
 if(separatorSelect) separatorSelect.addEventListener('change', () => DockAPI.storage.sync.set({ separatorStyle: separatorSelect.value }));
 if(shadowCheck) shadowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableShadow: shadowCheck.checked }));
-if(glowCheck) glowCheck.addEventListener('change', () => DockAPI.storage.sync.set({ enableGlow: glowCheck.checked }));
+
+if(hoverSelect) hoverSelect.addEventListener('change', () => DockAPI.storage.sync.set({ hoverStyle: hoverSelect.value }));
+
+// NEW: Save Line Settings
+if(thicknessSlider) thicknessSlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ lineThickness: e.target.value }));
+if(persistentCheck) persistentCheck.addEventListener('change', (e) => DockAPI.storage.sync.set({ persistentLine: e.target.checked }));
+
+
 if(accentCheck) accentCheck.addEventListener('change', () => { DockAPI.storage.sync.set({ enableAccent: accentCheck.checked }); toggleColorInput(accentCheck.checked); });
 if(vPosSlider) vPosSlider.addEventListener('input', (e) => { vPosValue.textContent = e.target.value + '%'; DockAPI.storage.sync.set({ verticalPos: e.target.value }); });
 
-// NEW LISTENERS
 if(blurSlider) blurSlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ backdropBlur: e.target.value }));
 if(shapeSelect) shapeSelect.addEventListener('change', (e) => DockAPI.storage.sync.set({ iconShape: e.target.value }));
 if(opacitySlider) opacitySlider.addEventListener('input', (e) => DockAPI.storage.sync.set({ idleOpacity: e.target.value }));
@@ -93,7 +107,7 @@ if(accentColorInput) accentColorInput.addEventListener('input', (e) => { DockAPI
 if(document.getElementById('openShortcutsBtn')) document.getElementById('openShortcutsBtn').addEventListener('click', () => { DockAPI.tabs.create({ url: 'about:addons' }); });
 window.addEventListener('focus', () => { updateShortcutDisplay(); });
 
-// --- REMAINDER: Add/Edit/Delete Logic ---
+// REMAINDER UNCHANGED
 if (itemTypeSelect) {
   itemTypeSelect.addEventListener('change', () => {
     const type = itemTypeSelect.value;
