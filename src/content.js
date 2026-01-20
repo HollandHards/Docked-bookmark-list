@@ -6,8 +6,29 @@ let settings = {
   accentColor: '#007aff', showTooltips: true, separatorStyle: 'glass',
   enableShadow: true, enableGlow: true, enableAccent: true, showSettings: true,
   backdropBlur: 10, iconShape: '12px', idleOpacity: 100,
-  userVerticalPos: 50
+  userVerticalPos: 50 
 };
+
+// --- LAZY LOAD OBSERVER ---
+// Only fetches the image URL when the icon is actually visible on screen.
+const iconObserver = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const img = entry.target;
+      if (img.dataset.src) {
+        // Load the real image
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        
+        // Trigger Fade-In
+        img.onload = () => { img.style.opacity = '1'; };
+        
+        // Stop watching this image
+        observer.unobserve(img);
+      }
+    }
+  });
+}, { root: null, rootMargin: "50px" }); // Start loading slightly before it hits the viewport
 
 function initDock() {
   if (document.getElementById('my-mac-dock')) return;
@@ -132,20 +153,17 @@ function refreshSettings() {
     dockContainer.style.setProperty('--icon-radius', settings.iconShape);
     dockContainer.style.setProperty('--idle-opacity', settings.idleOpacity / 100);
     
-    // Position classes
     dockContainer.classList.remove('left-side', 'right-side', 'top-side', 'bottom-side');
     if(settings.dockPosition === 'right') dockContainer.classList.add('right-side');
     else if(settings.dockPosition === 'bottom') dockContainer.classList.add('bottom-side');
     else if(settings.dockPosition === 'top') dockContainer.classList.add('top-side');
     else dockContainer.classList.add('left-side');
 
-    // Feature Flags
     dockContainer.classList.toggle('tooltips-enabled', settings.showTooltips);
     dockContainer.classList.toggle('shadow-enabled', settings.enableShadow);
     dockContainer.classList.toggle('glow-enabled', settings.enableGlow);
     dockContainer.classList.toggle('theme-enabled', settings.enableAccent);
 
-    // Theme Style
     dockContainer.classList.remove('style-glass', 'style-neon', 'style-minimal', 'style-classic');
     dockContainer.classList.add('style-' + settings.separatorStyle);
 
@@ -162,9 +180,6 @@ function refreshSettings() {
   });
 }
 
-// --- SMART CLAMPING + HANDLER FIX ---
-// 1. Clamps dock so list stays on screen.
-// 2. Counter-moves the handler so it stays fixed at user's % setting.
 function clampDockPosition() {
     if (!dockContainer) return;
     const handler = dockContainer.querySelector('.dock-handler');
@@ -175,51 +190,38 @@ function clampDockPosition() {
     const winWidth = window.innerWidth;
     const padding = 10;
 
-    // Reset Handler first (default centered on dock)
-    // Left/Right docks use translateY(-50%), Top/Bottom use translateX(-50%)
     if (isVertical) handler.style.transform = 'translateY(-50%)';
     else handler.style.transform = 'translateX(-50%)';
 
-    // 1. Reset Dock to User Preference
     dockContainer.style.setProperty('--dock-offset', vPos + '%');
     dockContainer.style.removeProperty('top');
     dockContainer.style.removeProperty('left');
 
-    // 2. Measure actual Dock position
     const rect = dockContainer.getBoundingClientRect();
 
     if (isVertical) {
         let shiftY = 0;
-        
-        // Check Overflow
         if (rect.bottom > winHeight - padding) {
             const overflow = rect.bottom - (winHeight - padding);
             const computedStyle = window.getComputedStyle(dockContainer);
             const currentTop = parseFloat(computedStyle.top);
             dockContainer.style.top = (currentTop - overflow) + 'px';
-            shiftY = -overflow; // We moved dock UP, so shift is negative
+            shiftY = -overflow; 
         } 
         else if (rect.top < padding) {
              const underflow = padding - rect.top;
              const computedStyle = window.getComputedStyle(dockContainer);
              const currentTop = parseFloat(computedStyle.top);
              dockContainer.style.top = (currentTop + underflow) + 'px';
-             shiftY = underflow; // We moved dock DOWN, so shift is positive
+             shiftY = underflow; 
         }
 
-        // 3. Counter-Move Handler
-        // If we shifted the dock UP (-100px), the handler moved UP with it.
-        // We must push the handler DOWN (+100px) to keep it visually fixed.
         if (shiftY !== 0) {
-            // Apply counter-movement (-shiftY)
-            // Original transform is translateY(-50%). We add the pixel offset.
             handler.style.transform = `translateY(calc(-50% + ${-shiftY}px))`;
         }
     } 
     else {
-        // Horizontal Logic
         let shiftX = 0;
-
         if (rect.right > winWidth - padding) {
             const overflow = rect.right - (winWidth - padding);
             const computedStyle = window.getComputedStyle(dockContainer);
@@ -348,6 +350,20 @@ function showContextMenu(e, bm) {
   menu.style.visibility = 'visible';
 }
 
+// --- HELPER: Create Lazy-Loaded Image ---
+function createLazyImage(src) {
+    const img = document.createElement('img');
+    // Transparent 1x1 pixel placeholder
+    img.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==";
+    // Store real URL in dataset
+    img.dataset.src = src;
+    img.style.opacity = '0'; // Start hidden
+    img.style.transition = 'opacity 0.3s ease'; // Smooth fade in
+    // Start observing
+    iconObserver.observe(img);
+    return img;
+}
+
 function renderBookmarks(bookmarks) {
   const handler = dockContainer.querySelector('.dock-handler');
   dockContainer.innerHTML = ''; dockContainer.appendChild(handler);
@@ -362,21 +378,26 @@ function renderBookmarks(bookmarks) {
     }
     const item = document.createElement(bm.children ? 'div' : 'a');
     item.className = 'dock-item'; item.title = bm.title;
+    
+    // Background images (like accent color masks) are hard to lazy load via Observer effectively without complexity,
+    // but the main heavy lifting is the <img> tag below.
     if (bm.iconUrl && !bm.iconUrl.startsWith('_default')) item.style.setProperty('--bg-image', `url('${bm.iconUrl}')`);
+    
     let iconEl;
     if (bm.children) {
-      item.classList.add('is-folder'); iconEl = document.createElement('img'); iconEl.src = bm.iconUrl; 
+      item.classList.add('is-folder'); 
+      iconEl = createLazyImage(bm.iconUrl);
       item.onclick = (e) => { e.stopPropagation(); toggleStack(bm, item); };
       item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
     } else if (bm.id === 'dock_settings_item') {
        item.classList.add('settings-item'); item.href = "#";
        item.onclick = (e) => { e.preventDefault(); DockAPI.runtime.sendMessage({ action: "open_settings" }); toggleDock(false); };
-       iconEl = document.createElement('img'); iconEl.src = bm.iconUrl; 
+       iconEl = createLazyImage(bm.iconUrl);
        item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
     } else {
        item.href = bm.url; item.target = "_blank";
        item.addEventListener('contextmenu', (e) => showContextMenu(e, bm));
-       iconEl = document.createElement('img'); iconEl.src = bm.iconUrl;
+       iconEl = createLazyImage(bm.iconUrl);
     }
     item.ondragstart = () => false; item.appendChild(iconEl); dockContainer.appendChild(item);
   });
@@ -406,7 +427,10 @@ function toggleStack(bookmark, anchorElement) {
     bookmark.children.forEach(child => {
        const link = document.createElement('a'); link.className = 'stack-item';
        link.href = child.url || '#'; link.target = "_blank"; link.title = child.title;
-       const icon = document.createElement('img'); icon.src = child.iconUrl;
+       
+       // LAZY LOAD STACK ICONS
+       const icon = createLazyImage(child.iconUrl);
+       
        const span = document.createElement('span'); span.innerText = child.title;
        link.appendChild(icon); link.appendChild(span); stack.appendChild(link);
     });
