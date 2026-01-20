@@ -1,4 +1,4 @@
-// adapter.js - Full Content
+// adapter.js
 // Detect if we are in Firefox (browser namespace exists)
 const isFirefox = (typeof browser !== 'undefined');
 
@@ -16,18 +16,31 @@ else {
       getURL: (path) => chrome.runtime.getURL(path),
       openOptionsPage: () => chrome.runtime.openOptionsPage(),
       
-      // Error checking wrapper for sendMessage
+      // FIXED: Added try-catch to handle "Extension context invalidated"
       sendMessage: (msg) => new Promise(resolve => {
-        chrome.runtime.sendMessage(msg, response => {
-          if (chrome.runtime.lastError) { resolve(null); } 
-          else { resolve(response); }
-        });
+        try {
+          chrome.runtime.sendMessage(msg, response => {
+            // If the background script didn't reply (port closed), Chrome sets lastError.
+            if (chrome.runtime.lastError) {
+              // resolve with null so the code continues without crashing
+              resolve(null); 
+            } else {
+              resolve(response);
+            }
+          });
+        } catch (e) {
+          // This catches the specific "Extension context invalidated" error
+          // preventing the "Uncaught (in promise)" error in the console.
+          // console.log("Extension reloaded. Please refresh the page.");
+          resolve(null);
+        }
       }),
 
       onMessage: {
         addListener: (callback) => {
           chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const result = callback(request, sender);
+            // If the callback returns a Promise, keep the channel open
             if (result && typeof result.then === 'function') {
               result.then(sendResponse);
               return true; 
@@ -39,14 +52,16 @@ else {
     tabs: {
       query: (q) => new Promise(r => chrome.tabs.query(q, r)),
       sendMessage: (id, msg) => new Promise(resolve => {
-        chrome.tabs.sendMessage(id, msg, response => {
-          if (chrome.runtime.lastError) resolve(null);
-          else resolve(response);
-        });
+        try {
+            chrome.tabs.sendMessage(id, msg, response => {
+              if (chrome.runtime.lastError) resolve(null);
+              else resolve(response);
+            });
+        } catch(e) { resolve(null); }
       }),
       create: (props) => new Promise(r => chrome.tabs.create(props, r))
     },
-    // --- UPDATED STORAGE ADAPTER FOR LIVE UPDATES ---
+    // --- UPDATED STORAGE ADAPTER ---
     storage: {
       onChanged: {
         addListener: (cb) => chrome.storage.onChanged.addListener(cb)
@@ -60,7 +75,7 @@ else {
         set: (v) => new Promise(r => chrome.storage.local.set(v, r))
       }
     },
-    // --- UPDATED BOOKMARKS ADAPTER FOR LIVE UPDATES ---
+    // --- UPDATED BOOKMARKS ADAPTER ---
     bookmarks: {
       onCreated: { addListener: (cb) => chrome.bookmarks.onCreated.addListener(cb) },
       onRemoved: { addListener: (cb) => chrome.bookmarks.onRemoved.addListener(cb) },
