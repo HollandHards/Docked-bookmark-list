@@ -1,7 +1,5 @@
 const DOCK_FOLDER_NAME = "Vertical-bookmark-list";
 
-// 1. AUTO-SETUP ON INSTALL
-// This runs once when the user installs the extension
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onInstalled) {
   chrome.runtime.onInstalled.addListener(async () => {
     await getOrCreateDockFolder();
@@ -18,7 +16,6 @@ async function getOrCreateDockFolder() {
   let dockFolder = findFolder(tree, DOCK_FOLDER_NAME);
   
   if (!dockFolder) {
-    // "Other Bookmarks" usually has ID '2' in Chrome and 'unfiled_____' in Firefox
     const rootChildren = tree[0].children;
     const parent = rootChildren.find(c => c.id === '2' || c.id === 'unfiled_____') || rootChildren[rootChildren.length - 1]; 
     
@@ -27,7 +24,6 @@ async function getOrCreateDockFolder() {
       title: DOCK_FOLDER_NAME
     });
     
-    // Default bookmark
     await DockAPI.bookmarks.create({
       parentId: dockFolder.id,
       title: "Welcome! Right-click to add pages",
@@ -146,7 +142,7 @@ function broadcastRefresh() {
     DockAPI.tabs.query({}).then(tabs => {
       tabs.forEach(tab => {
           DockAPI.tabs.sendMessage(tab.id, { action: "refresh_dock", data: bookmarks })
-            .catch(() => {}); // Ignore errors from tabs without the content script
+            .catch(() => {}); 
       });
     });
   });
@@ -185,7 +181,6 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
                 title: tab.title,
                 url: tab.url
             });
-            // broadcastRefresh() is now handled by the event listeners below
         }
     });
   }
@@ -212,11 +207,6 @@ DockAPI.runtime.onMessage.addListener((request, sender) => {
   return false; 
 });
 
-
-// --- LIVE UPDATE LISTENERS ---
-
-// 1. Watch for Bookmark Changes
-// When you drag a bookmark in Options, or add one in the browser, the Dock updates instantly.
 const handleBookmarkChange = () => broadcastRefresh();
 
 if (DockAPI.bookmarks.onCreated) DockAPI.bookmarks.onCreated.addListener(handleBookmarkChange);
@@ -224,8 +214,6 @@ if (DockAPI.bookmarks.onRemoved) DockAPI.bookmarks.onRemoved.addListener(handleB
 if (DockAPI.bookmarks.onChanged) DockAPI.bookmarks.onChanged.addListener(handleBookmarkChange);
 if (DockAPI.bookmarks.onMoved)   DockAPI.bookmarks.onMoved.addListener(handleBookmarkChange);
 
-// 2. Watch for settings that change the LIST (not just CSS)
-// e.g., Toggling the "Settings" gear icon requires re-rendering the list.
 if (DockAPI.storage.onChanged) {
     DockAPI.storage.onChanged.addListener((changes, namespace) => {
       if (namespace === 'sync') {
