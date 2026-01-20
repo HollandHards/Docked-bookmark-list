@@ -5,7 +5,8 @@ let settings = {
   dockPosition: 'left', dockSize: 48, edgeTrigger: false, handlerIcon: '',
   accentColor: '#007aff', showTooltips: true, separatorStyle: 'glass',
   enableShadow: true, enableGlow: true, enableAccent: true, showSettings: true,
-  backdropBlur: 10, iconShape: '12px', idleOpacity: 100
+  backdropBlur: 10, iconShape: '12px', idleOpacity: 100,
+  userVerticalPos: 50
 };
 
 function initDock() {
@@ -64,8 +65,13 @@ function initDock() {
     resetIcons();
     startHideTimer();
   });
+  
+  dockContainer.addEventListener('transitionend', (e) => {
+      if (e.target === dockContainer) clampDockPosition();
+  });
 
   refreshSettings();
+  window.addEventListener('resize', clampDockPosition);
 }
 
 function startHideTimer() {
@@ -102,7 +108,6 @@ function refreshSettings() {
     'enableGlow', 'enableAccent', 'showSettings',
     'backdropBlur', 'iconShape', 'idleOpacity'
   ]).then((res) => {
-    // 1. Load Defaults
     settings.dockPosition = res.dockPosition || 'left';
     settings.dockSize = parseInt(res.dockSize) || 48;
     settings.edgeTrigger = res.edgeTrigger === true;
@@ -114,46 +119,126 @@ function refreshSettings() {
     settings.enableGlow = (res.enableGlow !== false);
     settings.enableAccent = (res.enableAccent !== false);
     settings.showSettings = (res.showSettings !== false);
-    
     settings.backdropBlur = (res.backdropBlur !== undefined) ? res.backdropBlur : 10;
     settings.iconShape = res.iconShape || '12px';
     settings.idleOpacity = (res.idleOpacity !== undefined) ? res.idleOpacity : 100;
-    const vPos = res.verticalPos || 50;
+    
+    settings.userVerticalPos = res.verticalPos || 50; 
 
-    // 2. Apply CSS Variables
+    // Apply styles
     dockContainer.style.setProperty('--dock-icon-size', settings.dockSize + 'px');
-    dockContainer.style.setProperty('--dock-offset', vPos + '%');
     dockContainer.style.setProperty('--accent-color', settings.accentColor);
     dockContainer.style.setProperty('--dock-blur', settings.backdropBlur + 'px');
     dockContainer.style.setProperty('--icon-radius', settings.iconShape);
     dockContainer.style.setProperty('--idle-opacity', settings.idleOpacity / 100);
     
-    // 3. Apply Position Classes
+    // Position classes
     dockContainer.classList.remove('left-side', 'right-side', 'top-side', 'bottom-side');
     if(settings.dockPosition === 'right') dockContainer.classList.add('right-side');
     else if(settings.dockPosition === 'bottom') dockContainer.classList.add('bottom-side');
     else if(settings.dockPosition === 'top') dockContainer.classList.add('top-side');
     else dockContainer.classList.add('left-side');
 
-    // 4. Apply Feature Flags
-    if (settings.showTooltips) dockContainer.classList.add('tooltips-enabled'); else dockContainer.classList.remove('tooltips-enabled');
-    if (settings.enableShadow) dockContainer.classList.add('shadow-enabled'); else dockContainer.classList.remove('shadow-enabled');
-    if (settings.enableGlow) dockContainer.classList.add('glow-enabled'); else dockContainer.classList.remove('glow-enabled');
-    if (settings.enableAccent) dockContainer.classList.add('theme-enabled'); else dockContainer.classList.remove('theme-enabled');
+    // Feature Flags
+    dockContainer.classList.toggle('tooltips-enabled', settings.showTooltips);
+    dockContainer.classList.toggle('shadow-enabled', settings.enableShadow);
+    dockContainer.classList.toggle('glow-enabled', settings.enableGlow);
+    dockContainer.classList.toggle('theme-enabled', settings.enableAccent);
 
-    // 5. Apply Theme Style to Dock Container
+    // Theme Style
     dockContainer.classList.remove('style-glass', 'style-neon', 'style-minimal', 'style-classic');
     dockContainer.classList.add('style-' + settings.separatorStyle);
 
-    // 6. Update Handler
     const handler = dockContainer.querySelector('.dock-handler');
     if (handler) {
       handler.classList.add('has-icon');
       if (settings.handlerIcon && settings.handlerIcon.trim() !== '') handler.style.backgroundImage = `url('${settings.handlerIcon}')`;
       else handler.style.backgroundImage = `url('${DockAPI.runtime.getURL("icon.png")}')`;
     }
+    
     resetIcons();
+    clampDockPosition();
+    setTimeout(clampDockPosition, 350); 
   });
+}
+
+// --- SMART CLAMPING + HANDLER FIX ---
+// 1. Clamps dock so list stays on screen.
+// 2. Counter-moves the handler so it stays fixed at user's % setting.
+function clampDockPosition() {
+    if (!dockContainer) return;
+    const handler = dockContainer.querySelector('.dock-handler');
+
+    const vPos = settings.userVerticalPos;
+    const isVertical = (settings.dockPosition === 'left' || settings.dockPosition === 'right');
+    const winHeight = window.innerHeight;
+    const winWidth = window.innerWidth;
+    const padding = 10;
+
+    // Reset Handler first (default centered on dock)
+    // Left/Right docks use translateY(-50%), Top/Bottom use translateX(-50%)
+    if (isVertical) handler.style.transform = 'translateY(-50%)';
+    else handler.style.transform = 'translateX(-50%)';
+
+    // 1. Reset Dock to User Preference
+    dockContainer.style.setProperty('--dock-offset', vPos + '%');
+    dockContainer.style.removeProperty('top');
+    dockContainer.style.removeProperty('left');
+
+    // 2. Measure actual Dock position
+    const rect = dockContainer.getBoundingClientRect();
+
+    if (isVertical) {
+        let shiftY = 0;
+        
+        // Check Overflow
+        if (rect.bottom > winHeight - padding) {
+            const overflow = rect.bottom - (winHeight - padding);
+            const computedStyle = window.getComputedStyle(dockContainer);
+            const currentTop = parseFloat(computedStyle.top);
+            dockContainer.style.top = (currentTop - overflow) + 'px';
+            shiftY = -overflow; // We moved dock UP, so shift is negative
+        } 
+        else if (rect.top < padding) {
+             const underflow = padding - rect.top;
+             const computedStyle = window.getComputedStyle(dockContainer);
+             const currentTop = parseFloat(computedStyle.top);
+             dockContainer.style.top = (currentTop + underflow) + 'px';
+             shiftY = underflow; // We moved dock DOWN, so shift is positive
+        }
+
+        // 3. Counter-Move Handler
+        // If we shifted the dock UP (-100px), the handler moved UP with it.
+        // We must push the handler DOWN (+100px) to keep it visually fixed.
+        if (shiftY !== 0) {
+            // Apply counter-movement (-shiftY)
+            // Original transform is translateY(-50%). We add the pixel offset.
+            handler.style.transform = `translateY(calc(-50% + ${-shiftY}px))`;
+        }
+    } 
+    else {
+        // Horizontal Logic
+        let shiftX = 0;
+
+        if (rect.right > winWidth - padding) {
+            const overflow = rect.right - (winWidth - padding);
+            const computedStyle = window.getComputedStyle(dockContainer);
+            const currentLeft = parseFloat(computedStyle.left);
+            dockContainer.style.left = (currentLeft - overflow) + 'px';
+            shiftX = -overflow;
+        } 
+        else if (rect.left < padding) {
+            const underflow = padding - rect.left;
+            const computedStyle = window.getComputedStyle(dockContainer);
+            const currentLeft = parseFloat(computedStyle.left);
+            dockContainer.style.left = (currentLeft + underflow) + 'px';
+            shiftX = underflow;
+        }
+
+        if (shiftX !== 0) {
+            handler.style.transform = `translateX(calc(-50% + ${-shiftX}px))`;
+        }
+    }
 }
 
 DockAPI.runtime.onMessage.addListener((request, sender) => {
@@ -185,7 +270,13 @@ document.addEventListener('mousemove', (e) => {
 
 function toggleDock(show) {
   isDockVisible = show;
-  if (show) { dockContainer.classList.add('dock-visible'); } 
+  if (show) { 
+      dockContainer.classList.add('dock-visible'); 
+      requestAnimationFrame(() => {
+          clampDockPosition();
+          setTimeout(clampDockPosition, 300);
+      });
+  } 
   else { 
       dockContainer.classList.remove('dock-visible'); 
       closeAllStacks(); 
@@ -201,11 +292,13 @@ function closeContextMenu() { const existing = document.querySelector('.dock-con
 function showContextMenu(e, bm) {
   e.preventDefault(); closeContextMenu();
   clearTimeout(hideTimer); 
+  
   const menu = document.createElement('div');
   menu.className = 'dock-context-menu';
   menu.style.setProperty('--accent-color', settings.accentColor);
   menu.addEventListener('mouseleave', () => { startHideTimer(); });
   menu.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+  
   const addItem = (text, onClick, isDestructive = false) => {
     const item = document.createElement('div');
     item.className = 'ctx-item'; item.innerText = text;
@@ -213,10 +306,13 @@ function showContextMenu(e, bm) {
     item.onclick = (ev) => { ev.stopPropagation(); onClick(); closeContextMenu(); };
     menu.appendChild(item);
   };
+  
   addItem("Add Current Page to Dock", () => DockAPI.runtime.sendMessage({ action: "add_current_tab" }));
   const sep1 = document.createElement('div'); sep1.className = 'ctx-sep'; menu.appendChild(sep1);
-  if (bm.id === 'dock_settings_item') { addItem("Open Settings", () => DockAPI.runtime.sendMessage({ action: "open_settings" })); } 
-  else {
+  
+  if (bm.id === 'dock_settings_item') { 
+      addItem("Open Settings", () => DockAPI.runtime.sendMessage({ action: "open_settings" })); 
+  } else {
       addItem("Open in New Window", () => DockAPI.runtime.sendMessage({ action: "open_new_window", url: bm.url }));
       addItem("Open in Incognito", () => DockAPI.runtime.sendMessage({ action: "open_incognito", url: bm.url }));
       const sep2 = document.createElement('div'); sep2.className = 'ctx-sep'; menu.appendChild(sep2);
@@ -225,19 +321,31 @@ function showContextMenu(e, bm) {
       const sep3 = document.createElement('div'); sep3.className = 'ctx-sep'; menu.appendChild(sep3);
       addItem("Remove from Dock", () => { if (confirm(`Delete "${bm.title}" from your bookmarks?`)) DockAPI.runtime.sendMessage({ action: "delete_bookmark", id: bm.id }); }, true);
   }
+  
   const sepGlobal = document.createElement('div'); sepGlobal.className = 'ctx-sep'; menu.appendChild(sepGlobal);
   addItem(settings.showSettings ? "Hide Settings Icon" : "Show Settings Icon", () => {
       const newState = !settings.showSettings;
       DockAPI.storage.sync.set({ showSettings: newState }).then(() => DockAPI.runtime.sendMessage({ action: "request_refresh" }));
   });
+
+  menu.style.visibility = 'hidden';
   document.body.appendChild(menu);
-  const menuRect = menu.getBoundingClientRect();
-  const winWidth = window.innerWidth; const winHeight = window.innerHeight;
-  let posX = e.clientX + 5; let posY = e.clientY + 5;
-  if (posY + menuRect.height > winHeight) posY = e.clientY - menuRect.height - 5;
-  if (posX + menuRect.width > winWidth) posX = e.clientX - menuRect.width - 5;
-  if (posY < 0) posY = 5;
-  menu.style.left = `${posX}px`; menu.style.top = `${posY}px`;
+
+  const menuHeight = menu.offsetHeight;
+  const menuWidth = menu.offsetWidth;
+  const winWidth = window.innerWidth;
+  const winHeight = window.innerHeight;
+
+  let posX = e.clientX + 5;
+  let posY = e.clientY + 5;
+
+  if (posY + menuHeight > winHeight) posY = e.clientY - menuHeight - 5;
+  if (posX + menuWidth > winWidth) posX = e.clientX - menuWidth - 5;
+  if (posY < 5) posY = 5;
+
+  menu.style.left = `${posX}px`;
+  menu.style.top = `${posY}px`;
+  menu.style.visibility = 'visible';
 }
 
 function renderBookmarks(bookmarks) {
@@ -272,17 +380,28 @@ function renderBookmarks(bookmarks) {
     }
     item.ondragstart = () => false; item.appendChild(iconEl); dockContainer.appendChild(item);
   });
+  
+  requestAnimationFrame(() => {
+      clampDockPosition();
+      setTimeout(clampDockPosition, 300);
+  });
 }
 
 function toggleStack(bookmark, anchorElement) {
   const existing = document.querySelector(`.dock-stack[data-parent="${bookmark.id}"]`);
   if (existing) { existing.remove(); return; }
+  
   closeAllStacks(); 
   clearTimeout(hideTimer); 
+
   const stack = document.createElement('div'); stack.className = 'dock-stack';
   stack.dataset.parent = bookmark.id; stack.style.setProperty('--accent-color', settings.accentColor);
   stack.addEventListener('mouseenter', () => clearTimeout(hideTimer));
   stack.addEventListener('mouseleave', () => startHideTimer());
+  
+  stack.style.maxHeight = (window.innerHeight - 40) + 'px';
+  stack.style.overflowY = 'auto';
+
   if (bookmark.children && bookmark.children.length > 0) {
     bookmark.children.forEach(child => {
        const link = document.createElement('a'); link.className = 'stack-item';
@@ -294,16 +413,54 @@ function toggleStack(bookmark, anchorElement) {
   } else {
     stack.innerText = "Empty Folder"; stack.style.color = "#555"; stack.style.padding = "10px"; stack.style.fontSize = "12px";
   }
-  const rect = anchorElement.getBoundingClientRect();
-  if (settings.dockPosition === 'left') { stack.style.top = (rect.top - (bookmark.children.length * 2)) + 'px'; stack.style.left = (rect.right + 15) + 'px'; }
-  else if (settings.dockPosition === 'right') { stack.style.top = (rect.top - (bookmark.children.length * 2)) + 'px'; stack.style.right = (window.innerWidth - rect.left + 15) + 'px'; }
-  else if (settings.dockPosition === 'bottom') { stack.style.bottom = (window.innerHeight - rect.top + 15) + 'px'; stack.style.left = (rect.left - 50) + 'px'; }
-  else if (settings.dockPosition === 'top') { stack.style.top = (rect.bottom + 15) + 'px'; stack.style.left = (rect.left - 50) + 'px'; }
+
+  stack.style.visibility = 'hidden';
+  stack.style.animation = 'none';
+  stack.style.transform = 'none';
+  
   document.body.appendChild(stack);
+  
+  const stackRect = stack.getBoundingClientRect(); 
+  const anchorRect = anchorElement.getBoundingClientRect();
+  const winWidth = window.innerWidth;
+  const winHeight = window.innerHeight;
+  const padding = 10; 
+
+  let finalTop = 0;
+  let finalLeft = 0;
+
+  if (settings.dockPosition === 'left' || settings.dockPosition === 'right') {
+      let idealTop = anchorRect.top + (anchorRect.height / 2) - (stackRect.height / 2);
+      if (idealTop < padding) idealTop = padding;
+      if (idealTop + stackRect.height > winHeight - padding) {
+          idealTop = winHeight - stackRect.height - padding;
+      }
+      finalTop = idealTop;
+      if (settings.dockPosition === 'left') finalLeft = anchorRect.right + 15;
+      else finalLeft = anchorRect.left - stackRect.width - 15;
+  } 
+  else {
+      let idealLeft = anchorRect.left + (anchorRect.width / 2) - (stackRect.width / 2);
+      if (idealLeft < padding) idealLeft = padding;
+      if (idealLeft + stackRect.width > winWidth - padding) {
+          idealLeft = winWidth - stackRect.width - padding;
+      }
+      finalLeft = idealLeft;
+      if (settings.dockPosition === 'bottom') finalTop = anchorRect.top - stackRect.height - 15;
+      else finalTop = anchorRect.bottom + 15;
+  }
+
+  stack.style.top = finalTop + 'px';
+  stack.style.left = finalLeft + 'px';
+  stack.style.right = 'auto'; 
+  stack.style.bottom = 'auto';
+  
+  stack.offsetHeight; 
+  stack.style.animation = '';
+  stack.style.transform = '';
+  stack.style.visibility = 'visible';
 }
 
-// --- LIVE SETTINGS LISTENER ---
-// Watches for changes in storage (Options page) and updates CSS instantly
 if (DockAPI.storage.onChanged) {
     DockAPI.storage.onChanged.addListener((changes, namespace) => {
       if (namespace === 'sync') {
