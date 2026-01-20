@@ -1,37 +1,25 @@
-// adapter.js
-// Detect if we are in Firefox (browser namespace exists)
 const isFirefox = (typeof browser !== 'undefined');
-
-// In Service Workers, use 'self'. In pages, use 'this' or 'window'.
 const apiScope = (typeof self !== 'undefined') ? self : this;
 
 if (isFirefox) {
-  // Firefox: Native Promise support, just pass it through
   apiScope.DockAPI = browser;
 } 
 else {
-  // Chrome: Adapter to convert Callbacks to Promises
   apiScope.DockAPI = {
     runtime: {
       getURL: (path) => chrome.runtime.getURL(path),
       openOptionsPage: () => chrome.runtime.openOptionsPage(),
       
-      // FIXED: Added try-catch to handle "Extension context invalidated"
       sendMessage: (msg) => new Promise(resolve => {
         try {
           chrome.runtime.sendMessage(msg, response => {
-            // If the background script didn't reply (port closed), Chrome sets lastError.
             if (chrome.runtime.lastError) {
-              // resolve with null so the code continues without crashing
               resolve(null); 
             } else {
               resolve(response);
             }
           });
         } catch (e) {
-          // This catches the specific "Extension context invalidated" error
-          // preventing the "Uncaught (in promise)" error in the console.
-          // console.log("Extension reloaded. Please refresh the page.");
           resolve(null);
         }
       }),
@@ -40,7 +28,6 @@ else {
         addListener: (callback) => {
           chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const result = callback(request, sender);
-            // If the callback returns a Promise, keep the channel open
             if (result && typeof result.then === 'function') {
               result.then(sendResponse);
               return true; 
@@ -61,7 +48,6 @@ else {
       }),
       create: (props) => new Promise(r => chrome.tabs.create(props, r))
     },
-    // --- UPDATED STORAGE ADAPTER ---
     storage: {
       onChanged: {
         addListener: (cb) => chrome.storage.onChanged.addListener(cb)
@@ -75,7 +61,6 @@ else {
         set: (v) => new Promise(r => chrome.storage.local.set(v, r))
       }
     },
-    // --- UPDATED BOOKMARKS ADAPTER ---
     bookmarks: {
       onCreated: { addListener: (cb) => chrome.bookmarks.onCreated.addListener(cb) },
       onRemoved: { addListener: (cb) => chrome.bookmarks.onRemoved.addListener(cb) },
