@@ -10,25 +10,19 @@ let settings = {
 };
 
 // --- LAZY LOAD OBSERVER ---
-// Only fetches the image URL when the icon is actually visible on screen.
 const iconObserver = new IntersectionObserver((entries, observer) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
       const img = entry.target;
       if (img.dataset.src) {
-        // Load the real image
         img.src = img.dataset.src;
         img.removeAttribute('data-src');
-        
-        // Trigger Fade-In
         img.onload = () => { img.style.opacity = '1'; };
-        
-        // Stop watching this image
         observer.unobserve(img);
       }
     }
   });
-}, { root: null, rootMargin: "50px" }); // Start loading slightly before it hits the viewport
+}, { root: null, rootMargin: "50px" });
 
 function initDock() {
   if (document.getElementById('my-mac-dock')) return;
@@ -350,16 +344,12 @@ function showContextMenu(e, bm) {
   menu.style.visibility = 'visible';
 }
 
-// --- HELPER: Create Lazy-Loaded Image ---
 function createLazyImage(src) {
     const img = document.createElement('img');
-    // Transparent 1x1 pixel placeholder
     img.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==";
-    // Store real URL in dataset
     img.dataset.src = src;
-    img.style.opacity = '0'; // Start hidden
-    img.style.transition = 'opacity 0.3s ease'; // Smooth fade in
-    // Start observing
+    img.style.opacity = '0';
+    img.style.transition = 'opacity 0.3s ease';
     iconObserver.observe(img);
     return img;
 }
@@ -379,8 +369,6 @@ function renderBookmarks(bookmarks) {
     const item = document.createElement(bm.children ? 'div' : 'a');
     item.className = 'dock-item'; item.title = bm.title;
     
-    // Background images (like accent color masks) are hard to lazy load via Observer effectively without complexity,
-    // but the main heavy lifting is the <img> tag below.
     if (bm.iconUrl && !bm.iconUrl.startsWith('_default')) item.style.setProperty('--bg-image', `url('${bm.iconUrl}')`);
     
     let iconEl;
@@ -427,10 +415,7 @@ function toggleStack(bookmark, anchorElement) {
     bookmark.children.forEach(child => {
        const link = document.createElement('a'); link.className = 'stack-item';
        link.href = child.url || '#'; link.target = "_blank"; link.title = child.title;
-       
-       // LAZY LOAD STACK ICONS
        const icon = createLazyImage(child.iconUrl);
-       
        const span = document.createElement('span'); span.innerText = child.title;
        link.appendChild(icon); link.appendChild(span); stack.appendChild(link);
     });
